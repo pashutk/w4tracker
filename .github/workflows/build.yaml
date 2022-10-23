@@ -1,0 +1,31 @@
+on: [push]
+
+name: CI
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: wasm-snip
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - run: cp target/wasm32-unknown-unknown/release/cart.wasm ./cart.wasm
+      - run: wasm-snip --snip-rust-panicking-code cart.wasm > cart_snip.wasm
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16.x'
+      - run: npx w4 bundle cart_snip.wasm --title "Wow" --html my-game.html
+      - uses: actions/upload-artifact@v3
+        with:
+          name: my-artifact
+          path: my-game.html
