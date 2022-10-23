@@ -6,22 +6,11 @@ mod wasm4;
 use notes::{note_freq, note_from_string, note_to_render};
 use wasm4::*;
 
-#[rustfmt::skip]
-const SMILEY: [u8; 8] = [
-    0b11000011,
-    0b10000001,
-    0b00100100,
-    0b00100100,
-    0b00000000,
-    0b00100100,
-    0b10011001,
-    0b11000011,
-];
-
 struct Tracker {
     frame: u32,
     tick: u8,
     pattern: [Option<usize>; 16],
+    cursor_tick: u8,
     // also bpm
 }
 
@@ -31,6 +20,7 @@ impl Tracker {
             frame: 0,
             tick: 0,
             pattern: [None; 16],
+            cursor_tick: 0,
         }
     }
 
@@ -38,6 +28,7 @@ impl Tracker {
         Tracker {
             tick: 0,
             frame: 0,
+            cursor_tick: 0,
             pattern: [
                 Some(note_from_string("C3").unwrap()),
                 Some(note_from_string("C3").unwrap()),
@@ -102,10 +93,14 @@ fn start() {
 
 #[no_mangle]
 fn update() {
-    unsafe { *DRAW_COLORS = 2 }
-    // text("Hello from Rust!!!", 10, 10);
+    unsafe { *DRAW_COLORS = 3 }
+
+    let cursor: u8;
+    unsafe { cursor = TRACKER.cursor_tick };
+
     for line in 0..16 {
         text(format!("{:0X}", line), 1, line * 10 + 1);
+        // let cursor: &u8 = &TRACKER.cursor_tick.to_owned();
         let note: Option<usize>;
         unsafe {
             note = TRACKER.pattern[line as usize];
@@ -115,17 +110,46 @@ fn update() {
         } else {
             "---".to_string()
         };
-        text(name, 16, line * 10 + 1);
+
+        if line == cursor.into() {
+            rect(15, line * 10, 26, 10);
+            unsafe { *DRAW_COLORS = 1 }
+            text(name, 16, line * 10 + 1);
+            unsafe { *DRAW_COLORS = 3 }
+        } else {
+            text(name, 16, line * 10 + 1);
+        };
     }
 
     let gamepad = unsafe { *GAMEPAD1 };
     if gamepad & BUTTON_1 != 0 {
-        unsafe { *DRAW_COLORS = 4 }
-        tone(262 / 2, 511, 100, TONE_TRIANGLE);
+        if gamepad & BUTTON_RIGHT != 0 {
+            unsafe {
+                if let Some(note) = TRACKER.pattern[cursor as usize] {
+                    if note < note_freq.len() - 1 {
+                        TRACKER.pattern[cursor as usize] = Some(note + 1)
+                    }
+                }
+            }
+        } else if gamepad & BUTTON_LEFT != 0 {
+            unsafe {
+                if let Some(note) = TRACKER.pattern[cursor as usize] {
+                    if note != 0 {
+                        TRACKER.pattern[cursor as usize] = Some(note - 1)
+                    }
+                }
+            }
+        }
+    } else if gamepad & BUTTON_DOWN != 0 && cursor < 15 {
+        unsafe { TRACKER.cursor_tick = cursor + 1 }
+    } else if gamepad & BUTTON_UP != 0 && cursor != 0 {
+        unsafe { TRACKER.cursor_tick = cursor - 1 }
     }
 
-    blit(&SMILEY, 76, 76, 8, 8, BLIT_1BPP);
-    text("Press X to blink", 16, 90);
+    unsafe { *DRAW_COLORS = 2 }
+    text("nav:   arrows", 46, 50);
+    text("pitch: X+L/R", 46, 60);
+    unsafe { *DRAW_COLORS = 3 }
 
     unsafe {
         let tick: i32 = TRACKER.tick.into();
