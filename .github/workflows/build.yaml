@@ -25,7 +25,8 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: '16.x'
-      - run: npx w4 bundle cart_snip.wasm --title "Wow" --html my-game.html
+      - run: npm install -g wasm4 
+      - run: w4 bundle cart_snip.wasm --title "Wow" --html my-game.html
       - uses: actions/upload-artifact@v3
         with:
           name: my-artifact
