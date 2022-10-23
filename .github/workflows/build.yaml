@@ -2,6 +2,9 @@ on: [push]
 
 name: CI
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build
@@ -26,8 +29,9 @@ jobs:
         with:
           node-version: '16.x'
       - run: npm install -g wasm4 
-      - run: w4 bundle cart_snip.wasm --title "Wow" --html my-game.html
-      - uses: actions/upload-artifact@v3
+      - run: w4 bundle cart_snip.wasm --title "Wow" --html index.html
+      - run: mkdir _build && mv index.html _build/index.html
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          name: my-artifact
-          path: my-game.html
+          folder: _build
