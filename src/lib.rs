@@ -13,6 +13,7 @@ struct Tracker {
     tick: u8,
     pattern: [Option<usize>; 16],
     cursor_tick: u8,
+    playing: bool,
     // also bpm
 }
 
@@ -23,6 +24,7 @@ impl Tracker {
             tick: 0,
             pattern: [None; 16],
             cursor_tick: 0,
+            playing: false,
         }
     }
 
@@ -31,6 +33,7 @@ impl Tracker {
             tick: 0,
             frame: 0,
             cursor_tick: 0,
+            playing: false,
             pattern: [
                 Some(note_from_string("C3").unwrap()),
                 Some(note_from_string("C3").unwrap()),
@@ -48,22 +51,6 @@ impl Tracker {
                 None,
                 Some(note_from_string("D#3").unwrap()),
                 None,
-                // freq_from_string("C3"),
-                // freq_from_string("D3"),
-                // freq_from_string("E3"),
-                // freq_from_string("F3"),
-                // freq_from_string("G3"),
-                // freq_from_string("A3"),
-                // freq_from_string("B3"),
-                // freq_from_string("C4"),
-                // freq_from_string("A3"),
-                // freq_from_string("F3"),
-                // freq_from_string("D3"),
-                // freq_from_string("A3"),
-                // freq_from_string("B3"),
-                // freq_from_string("G3"),
-                // freq_from_string("D3"),
-                // freq_from_string("E3"),
             ],
         }
     }
@@ -75,10 +62,24 @@ impl Tracker {
         }
     }
 
+    fn toggle_play(&mut self) {
+        if !self.playing {
+            self.tick = 0;
+            self.frame = 0;
+        }
+        self.playing = !self.playing;
+    }
+
     fn update(&mut self) {
+        if !self.playing {
+            return;
+        }
+
+        if self.frame == 0 {
+            self.play_tick();
+        }
         self.frame = if self.frame == 7 {
             self.tick = if self.tick == 15 { 0 } else { self.tick + 1 };
-            self.play_tick();
             0
         } else {
             self.frame + 1
@@ -87,10 +88,6 @@ impl Tracker {
 }
 
 static mut TRACKER: Tracker = Tracker::empty();
-
-static mut TICK: u32 = 0;
-
-static mut LAST_CALL: u32 = 0;
 
 static mut TIMERS: Timers = Timers {
     tick: 0,
@@ -227,11 +224,14 @@ fn update() {
             TIMERS
                 .run_action_debounced("nav_up".to_string(), 4, || TRACKER.cursor_tick = cursor - 1)
         }
+    } else if gamepad & BUTTON_2 != 0 {
+        unsafe { TIMERS.run_action_debounced("play".to_string(), 12, || TRACKER.toggle_play()) }
     }
 
     set_color(Color::Light);
-    text("nav:   arrows", 46, 50);
-    text("pitch: X+L/R", 46, 60);
+    text("nav:   arrows", 46, 54);
+    text("pitch: X+L/R", 46, 64);
+    text("start/stop: Z", 46, 74);
     set_color(Color::Primary);
 
     unsafe {
