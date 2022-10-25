@@ -1,10 +1,12 @@
 #[cfg(feature = "buddy-alloc")]
 mod alloc;
+mod inputs;
 mod notes;
 mod wasm4;
 
 use std::{collections::HashMap, ops::Deref};
 
+use inputs::{InputEvent, Inputs};
 use notes::{note_freq, note_from_string, note_to_render};
 use wasm4::*;
 
@@ -153,11 +155,33 @@ fn set_color(color: Color) {
     }
 }
 
+static mut INPUTS: Inputs = Inputs::new();
+
 #[no_mangle]
 fn start() {
     unsafe {
         TRACKER = Tracker::new();
         TIMERS.init();
+        INPUTS
+            .listen(InputEvent::Button2Press, || {
+                TIMERS.run_action_debounced("play".to_string(), 12, || TRACKER.toggle_play())
+            })
+            .listen(InputEvent::ButtonDownPress, || {
+                let cursor = TRACKER.cursor_tick;
+                if cursor < 15 {
+                    TIMERS.run_action_debounced("nav_down".to_string(), 4, || {
+                        TRACKER.cursor_tick = cursor + 1
+                    })
+                }
+            })
+            .listen(InputEvent::ButtonUpPress, || {
+                let cursor = TRACKER.cursor_tick;
+                if cursor != 0 {
+                    TIMERS.run_action_debounced("nav_up".to_string(), 4, || {
+                        TRACKER.cursor_tick = cursor - 1
+                    })
+                }
+            });
     }
 }
 
@@ -181,12 +205,12 @@ fn update() {
         };
 
         if line == cursor.into() {
-            rect(15, line * 10, 26, 10);
+            rect(20, line * 10, 8 * 3 + 2, 10);
             set_color(Color::Background);
-            text(name, 16, line * 10 + 1);
+            text(name, 21, line * 10 + 1);
             set_color(Color::Primary);
         } else {
-            text(name, 16, line * 10 + 1);
+            text(name, 21, line * 10 + 1);
         };
     }
 
@@ -213,32 +237,20 @@ fn update() {
                 })
             }
         }
-    } else if gamepad & BUTTON_DOWN != 0 && cursor < 15 {
-        unsafe {
-            TIMERS.run_action_debounced("nav_down".to_string(), 4, || {
-                TRACKER.cursor_tick = cursor + 1
-            })
-        }
-    } else if gamepad & BUTTON_UP != 0 && cursor != 0 {
-        unsafe {
-            TIMERS
-                .run_action_debounced("nav_up".to_string(), 4, || TRACKER.cursor_tick = cursor - 1)
-        }
-    } else if gamepad & BUTTON_2 != 0 {
-        unsafe { TIMERS.run_action_debounced("play".to_string(), 12, || TRACKER.toggle_play()) }
     }
 
     set_color(Color::Light);
-    text("nav:   arrows", 46, 54);
-    text("pitch: X+L/R", 46, 64);
-    text("start/stop: Z", 46, 74);
+    text("nav:   arrows", 50, 54);
+    text("pitch: X+L/R", 50, 64);
+    text("start/stop: Z", 50, 74);
     set_color(Color::Primary);
 
     unsafe {
         let tick: i32 = TRACKER.tick.into();
-        text(">", 9, tick * 10);
+        text(">", 11, tick * 10 + 1);
 
-        TRACKER.update()
+        TRACKER.update();
+        INPUTS.tick();
     }
     unsafe { TIMERS.tick() }
 }
