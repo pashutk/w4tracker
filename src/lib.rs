@@ -181,6 +181,30 @@ fn start() {
                         TRACKER.cursor_tick = cursor - 1
                     })
                 }
+            })
+            .listen(InputEvent::ButtonRightPress, || {
+                if INPUTS.is_button1_pressed() {
+                    let cursor = TRACKER.cursor_tick;
+                    TIMERS.run_action_debounced("pitch_up".to_string(), 4, || {
+                        if let Some(note) = TRACKER.pattern[cursor as usize] {
+                            if note < note_freq.len() - 1 {
+                                TRACKER.pattern[cursor as usize] = Some(note + 1)
+                            }
+                        }
+                    })
+                }
+            })
+            .listen(InputEvent::ButtonLeftPress, || {
+                if INPUTS.is_button1_pressed() {
+                    TIMERS.run_action_debounced("pitch_down".to_string(), 4, || {
+                        let cursor = TRACKER.cursor_tick;
+                        if let Some(note) = TRACKER.pattern[cursor as usize] {
+                            if note != 0 {
+                                TRACKER.pattern[cursor as usize] = Some(note - 1)
+                            }
+                        }
+                    })
+                }
             });
     }
 }
@@ -212,31 +236,6 @@ fn update() {
         } else {
             text(name, 21, line * 10 + 1);
         };
-    }
-
-    let gamepad = unsafe { *GAMEPAD1 };
-    if gamepad & BUTTON_1 != 0 {
-        if gamepad & BUTTON_RIGHT != 0 {
-            unsafe {
-                TIMERS.run_action_debounced("pitch_up".to_string(), 4, || {
-                    if let Some(note) = TRACKER.pattern[cursor as usize] {
-                        if note < note_freq.len() - 1 {
-                            TRACKER.pattern[cursor as usize] = Some(note + 1)
-                        }
-                    }
-                })
-            }
-        } else if gamepad & BUTTON_LEFT != 0 {
-            unsafe {
-                TIMERS.run_action_debounced("pitch_down".to_string(), 4, || {
-                    if let Some(note) = TRACKER.pattern[cursor as usize] {
-                        if note != 0 {
-                            TRACKER.pattern[cursor as usize] = Some(note - 1)
-                        }
-                    }
-                })
-            }
-        }
     }
 
     set_color(Color::Light);
