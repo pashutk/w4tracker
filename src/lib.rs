@@ -4,10 +4,10 @@ mod inputs;
 mod notes;
 mod wasm4;
 
-use std::{collections::HashMap, ops::Deref};
+use std::collections::HashMap;
 
 use inputs::{InputEvent, Inputs};
-use notes::{note_freq, note_from_string, note_to_render};
+use notes::{note_c3_index, note_freq, note_from_string, note_to_render};
 use wasm4::*;
 
 struct Tracker {
@@ -182,6 +182,12 @@ fn start() {
                     })
                 }
             })
+            .listen(InputEvent::Button1Press, || {
+                let cursor = TRACKER.cursor_tick;
+                if let None = TRACKER.pattern[cursor as usize] {
+                    TRACKER.pattern[cursor as usize] = Some(note_c3_index)
+                }
+            })
             .listen(InputEvent::ButtonRightPress, || {
                 if INPUTS.is_button1_pressed() {
                     let cursor = TRACKER.cursor_tick;
@@ -240,8 +246,10 @@ fn update() {
 
     set_color(Color::Light);
     text("nav:   arrows", 50, 54);
-    text("pitch: X+L/R", 50, 64);
-    text("start/stop: Z", 50, 74);
+    text("play/stop:  Z", 50, 64);
+    text("add note:   X", 50, 74);
+    text("rm note:   XX", 50, 84);
+    text("pitch:  X+L/R", 50, 94);
     set_color(Color::Primary);
 
     unsafe {
