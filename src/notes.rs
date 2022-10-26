@@ -20,7 +20,7 @@ pub const note_freq: [u16; 108] = [
     4186, 4435, 4699, 4978, 5274, 5588, 5920, 6272, 6645, 7040, 7459, 7902,
 ];
 
-pub const note_c3_index: usize = 57;
+pub const note_c3_index: usize = 36;
 
 const NOTES_PER_OCTAVE: u32 = 12;
 
