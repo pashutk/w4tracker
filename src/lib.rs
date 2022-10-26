@@ -3,12 +3,14 @@ mod alloc;
 mod inputs;
 mod notes;
 mod wasm4;
+mod wtime;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use inputs::{InputEvent, Inputs};
 use notes::{note_c3_index, note_freq, note_from_string, note_to_render};
 use wasm4::*;
+use wtime::Winstant;
 
 struct Tracker {
     frame: u32,
@@ -91,14 +93,10 @@ impl Tracker {
 
 static mut TRACKER: Tracker = Tracker::empty();
 
-static mut TIMERS: Timers = Timers {
-    tick: 0,
-    last_calls: None,
-};
+static mut TIMERS: Timers = Timers { last_calls: None };
 
 struct Timers {
-    tick: u32,
-    last_calls: Option<HashMap<String, u32>>,
+    last_calls: Option<HashMap<String, Winstant>>,
 }
 
 impl Timers {
@@ -106,33 +104,33 @@ impl Timers {
         self.last_calls = Some(HashMap::new());
     }
 
-    fn tick(&mut self) {
-        self.tick += 1;
-    }
-
     fn run_action<F>(&mut self, key: String, action: F)
     where
         F: FnOnce(),
     {
+        let now = Winstant::now();
         let map = self
             .last_calls
             .as_mut()
             .expect("Timers should be initialized");
-        map.insert(key, self.tick);
+        map.insert(key, now);
         action()
     }
 
-    fn run_action_debounced<F>(&mut self, key: String, t: u32, action: F)
+    fn run_action_debounced<F>(&mut self, key: String, t: Duration, action: F)
     where
         F: FnOnce(),
     {
+        let now = Winstant::now();
         let map = self
             .last_calls
             .as_ref()
             .expect("Timers should be initialized");
-        let last_call = map.get(&key).map_or(0, |a| *a);
-        if self.tick - last_call > t {
-            self.run_action(key, action)
+        let last_call = map.get(&key);
+        match last_call {
+            Some(last_call) if now > *last_call + t => self.run_action(key, action),
+            None => self.run_action(key, action),
+            _ => {}
         }
     }
 }
@@ -164,22 +162,28 @@ fn start() {
         TIMERS.init();
         INPUTS
             .listen(InputEvent::Button2Press, || {
-                TIMERS.run_action_debounced("play".to_string(), 12, || TRACKER.toggle_play())
+                TIMERS.run_action_debounced("play".to_string(), Duration::from_millis(200), || {
+                    TRACKER.toggle_play()
+                })
             })
             .listen(InputEvent::ButtonDownPress, || {
                 let cursor = TRACKER.cursor_tick;
                 if cursor < 15 {
-                    TIMERS.run_action_debounced("nav_down".to_string(), 4, || {
-                        TRACKER.cursor_tick = cursor + 1
-                    })
+                    TIMERS.run_action_debounced(
+                        "nav_down".to_string(),
+                        Duration::from_millis(100),
+                        || TRACKER.cursor_tick = cursor + 1,
+                    )
                 }
             })
             .listen(InputEvent::ButtonUpPress, || {
                 let cursor = TRACKER.cursor_tick;
                 if cursor != 0 {
-                    TIMERS.run_action_debounced("nav_up".to_string(), 4, || {
-                        TRACKER.cursor_tick = cursor - 1
-                    })
+                    TIMERS.run_action_debounced(
+                        "nav_up".to_string(),
+                        Duration::from_millis(100),
+                        || TRACKER.cursor_tick = cursor - 1,
+                    )
                 }
             })
             .listen(InputEvent::Button1Press, || {
@@ -191,25 +195,33 @@ fn start() {
             .listen(InputEvent::ButtonRightPress, || {
                 if INPUTS.is_button1_pressed() {
                     let cursor = TRACKER.cursor_tick;
-                    TIMERS.run_action_debounced("pitch_up".to_string(), 4, || {
-                        if let Some(note) = TRACKER.pattern[cursor as usize] {
-                            if note < note_freq.len() - 1 {
-                                TRACKER.pattern[cursor as usize] = Some(note + 1)
+                    TIMERS.run_action_debounced(
+                        "pitch_up".to_string(),
+                        Duration::from_millis(100),
+                        || {
+                            if let Some(note) = TRACKER.pattern[cursor as usize] {
+                                if note < note_freq.len() - 1 {
+                                    TRACKER.pattern[cursor as usize] = Some(note + 1)
+                                }
                             }
-                        }
-                    })
+                        },
+                    )
                 }
             })
             .listen(InputEvent::ButtonLeftPress, || {
                 if INPUTS.is_button1_pressed() {
-                    TIMERS.run_action_debounced("pitch_down".to_string(), 4, || {
-                        let cursor = TRACKER.cursor_tick;
-                        if let Some(note) = TRACKER.pattern[cursor as usize] {
-                            if note != 0 {
-                                TRACKER.pattern[cursor as usize] = Some(note - 1)
+                    TIMERS.run_action_debounced(
+                        "pitch_down".to_string(),
+                        Duration::from_millis(100),
+                        || {
+                            let cursor = TRACKER.cursor_tick;
+                            if let Some(note) = TRACKER.pattern[cursor as usize] {
+                                if note != 0 {
+                                    TRACKER.pattern[cursor as usize] = Some(note - 1)
+                                }
                             }
-                        }
-                    })
+                        },
+                    )
                 }
             });
     }
@@ -259,5 +271,5 @@ fn update() {
         TRACKER.update();
         INPUTS.tick();
     }
-    unsafe { TIMERS.tick() }
+    unsafe { Winstant::tick() }
 }
