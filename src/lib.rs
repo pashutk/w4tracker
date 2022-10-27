@@ -192,6 +192,12 @@ fn start() {
                     TRACKER.pattern[cursor as usize] = Some(note_c3_index)
                 }
             })
+            .listen(InputEvent::Button1DoublePress, || {
+                let cursor = TRACKER.cursor_tick;
+                if let Some(_) = TRACKER.pattern[cursor as usize] {
+                    TRACKER.pattern[cursor as usize] = None
+                }
+            })
             .listen(InputEvent::ButtonRightPress, || {
                 if INPUTS.is_button1_pressed() {
                     let cursor = TRACKER.cursor_tick;
@@ -271,5 +277,6 @@ fn update() {
         TRACKER.update();
         INPUTS.tick();
     }
-    unsafe { Winstant::tick() }
+
+    Winstant::tick();
 }
