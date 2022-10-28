@@ -1,5 +1,7 @@
 # w4tracker
 
+![Screenshot](https://api.apiflash.com/v1/urltoimage?access_key=2a6e871601a54cc6ad20b5f1990cdf91&wait_until=page_loaded&url=https://pashutk.com/w4tracker/&delay=3)
+
 A game written in Rust for the [WASM-4](https://wasm4.org) fantasy console.
 
 ## Building
