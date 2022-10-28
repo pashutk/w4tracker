@@ -8,7 +8,7 @@ mod wtime;
 use std::{collections::HashMap, time::Duration};
 
 use inputs::{InputEvent, Inputs};
-use notes::{note_c3_index, note_freq, note_from_string, note_to_render};
+use notes::{note_c3_index, note_freq, note_from_string, note_to_render, NOTES_PER_OCTAVE};
 use wasm4::*;
 use wtime::Winstant;
 
@@ -168,7 +168,20 @@ fn start() {
             })
             .listen(InputEvent::ButtonDownPress, || {
                 let cursor = TRACKER.cursor_tick;
-                if cursor < 15 {
+                if INPUTS.is_button1_pressed() {
+                    TIMERS.run_action_debounced(
+                        "pitch_octave_down".to_string(),
+                        Duration::from_millis(100),
+                        || {
+                            if let Some(note) = TRACKER.pattern[cursor as usize] {
+                                if (note as u32) >= NOTES_PER_OCTAVE {
+                                    TRACKER.pattern[cursor as usize] =
+                                        Some(note - NOTES_PER_OCTAVE as usize)
+                                }
+                            }
+                        },
+                    )
+                } else if cursor < 15 {
                     TIMERS.run_action_debounced(
                         "nav_down".to_string(),
                         Duration::from_millis(100),
@@ -178,7 +191,20 @@ fn start() {
             })
             .listen(InputEvent::ButtonUpPress, || {
                 let cursor = TRACKER.cursor_tick;
-                if cursor != 0 {
+                if INPUTS.is_button1_pressed() {
+                    TIMERS.run_action_debounced(
+                        "pitch_octave_up".to_string(),
+                        Duration::from_millis(100),
+                        || {
+                            if let Some(note) = TRACKER.pattern[cursor as usize] {
+                                if (note as u32) < note_freq.len() as u32 - NOTES_PER_OCTAVE {
+                                    TRACKER.pattern[cursor as usize] =
+                                        Some(NOTES_PER_OCTAVE as usize + note)
+                                }
+                            }
+                        },
+                    )
+                } else if cursor != 0 {
                     TIMERS.run_action_debounced(
                         "nav_up".to_string(),
                         Duration::from_millis(100),
@@ -263,11 +289,12 @@ fn update() {
     }
 
     set_color(Color::Light);
-    text("nav:   arrows", 50, 54);
-    text("play/stop:  Z", 50, 64);
-    text("add note:   X", 50, 74);
-    text("rm note:   XX", 50, 84);
-    text("pitch:  X+L/R", 50, 94);
+    text_bytes(b"nav:       \x86\x87", 50, 54);
+    text_bytes(b"play/stop:  \x81", 50, 64);
+    text_bytes(b"add note:   \x80", 50, 74);
+    text_bytes(b"rm note:   \x80\x80", 50, 84);
+    text_bytes(b"pitch: \x80+\x84\x85\x86\x87", 50, 94);
+
     set_color(Color::Primary);
 
     unsafe {

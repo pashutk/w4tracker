@@ -22,7 +22,7 @@ pub const note_freq: [u16; 108] = [
 
 pub const note_c3_index: usize = 36;
 
-const NOTES_PER_OCTAVE: u32 = 12;
+pub const NOTES_PER_OCTAVE: u32 = 12;
 
 const fn letter_to_note_num(letter: char) -> Option<usize> {
     match letter {
