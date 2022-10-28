@@ -12,12 +12,25 @@ use notes::{note_c3_index, note_freq, note_from_string, note_to_render, NOTES_PE
 use wasm4::*;
 use wtime::Winstant;
 
+#[derive(Clone, Copy)]
+struct Note {
+    index: usize,
+    instrument: usize,
+}
+
+#[derive(PartialEq, Clone, Copy)]
+enum Column {
+    Note,
+    Instrument,
+}
+
 struct Tracker {
     frame: u32,
     tick: u8,
-    pattern: [Option<usize>; 16],
+    pattern: [Option<Note>; 16],
     cursor_tick: u8,
     playing: bool,
+    selected_column: Column,
     // also bpm
 }
 
@@ -29,6 +42,7 @@ impl Tracker {
             pattern: [None; 16],
             cursor_tick: 0,
             playing: false,
+            selected_column: Column::Note,
         }
     }
 
@@ -38,22 +52,44 @@ impl Tracker {
             frame: 0,
             cursor_tick: 0,
             playing: false,
+            selected_column: Column::Note,
             pattern: [
-                Some(note_from_string("C3").unwrap()),
-                Some(note_from_string("C3").unwrap()),
-                Some(note_from_string("C4").unwrap()),
+                Some(Note {
+                    index: note_from_string("C3").unwrap(),
+                    instrument: 0,
+                }),
+                Some(Note {
+                    index: note_from_string("C3").unwrap(),
+                    instrument: 1,
+                }),
+                Some(Note {
+                    index: note_from_string("C4").unwrap(),
+                    instrument: 11,
+                }),
                 None,
-                Some(note_from_string("G3").unwrap()),
+                Some(Note {
+                    index: note_from_string("G3").unwrap(),
+                    instrument: 0,
+                }),
                 None,
                 None,
-                Some(note_from_string("F#3").unwrap()),
+                Some(Note {
+                    index: note_from_string("F#3").unwrap(),
+                    instrument: 0,
+                }),
                 None,
                 None,
-                Some(note_from_string("F3").unwrap()),
+                Some(Note {
+                    index: note_from_string("F3").unwrap(),
+                    instrument: 0,
+                }),
                 None,
                 None,
                 None,
-                Some(note_from_string("D#3").unwrap()),
+                Some(Note {
+                    index: note_from_string("D#3").unwrap(),
+                    instrument: 0,
+                }),
                 None,
             ],
         }
@@ -62,7 +98,7 @@ impl Tracker {
     fn play_tick(&self) {
         let pattern_index: usize = self.tick.into();
         if let Some(note) = self.pattern[pattern_index] {
-            tone(note_freq[note].into(), 4 | (8 << 8), 100, TONE_PULSE1)
+            tone(note_freq[note.index].into(), 4 | (8 << 8), 100, TONE_PULSE1)
         }
     }
 
@@ -168,15 +204,17 @@ fn start() {
             })
             .listen(InputEvent::ButtonDownPress, || {
                 let cursor = TRACKER.cursor_tick;
-                if INPUTS.is_button1_pressed() {
+                if INPUTS.is_button1_pressed() && TRACKER.selected_column == Column::Note {
                     TIMERS.run_action_debounced(
                         "pitch_octave_down".to_string(),
                         Duration::from_millis(100),
                         || {
                             if let Some(note) = TRACKER.pattern[cursor as usize] {
-                                if (note as u32) >= NOTES_PER_OCTAVE {
-                                    TRACKER.pattern[cursor as usize] =
-                                        Some(note - NOTES_PER_OCTAVE as usize)
+                                if (note.index as u32) >= NOTES_PER_OCTAVE {
+                                    TRACKER.pattern[cursor as usize] = Some(Note {
+                                        index: note.index - NOTES_PER_OCTAVE as usize,
+                                        ..note
+                                    })
                                 }
                             }
                         },
@@ -191,15 +229,17 @@ fn start() {
             })
             .listen(InputEvent::ButtonUpPress, || {
                 let cursor = TRACKER.cursor_tick;
-                if INPUTS.is_button1_pressed() {
+                if INPUTS.is_button1_pressed() && TRACKER.selected_column == Column::Note {
                     TIMERS.run_action_debounced(
                         "pitch_octave_up".to_string(),
                         Duration::from_millis(100),
                         || {
                             if let Some(note) = TRACKER.pattern[cursor as usize] {
-                                if (note as u32) < note_freq.len() as u32 - NOTES_PER_OCTAVE {
-                                    TRACKER.pattern[cursor as usize] =
-                                        Some(NOTES_PER_OCTAVE as usize + note)
+                                if (note.index as u32) < note_freq.len() as u32 - NOTES_PER_OCTAVE {
+                                    TRACKER.pattern[cursor as usize] = Some(Note {
+                                        index: NOTES_PER_OCTAVE as usize + note.index,
+                                        ..note
+                                    })
                                 }
                             }
                         },
@@ -215,7 +255,10 @@ fn start() {
             .listen(InputEvent::Button1Press, || {
                 let cursor = TRACKER.cursor_tick;
                 if let None = TRACKER.pattern[cursor as usize] {
-                    TRACKER.pattern[cursor as usize] = Some(note_c3_index)
+                    TRACKER.pattern[cursor as usize] = Some(Note {
+                        index: note_c3_index,
+                        instrument: 0,
+                    })
                 }
             })
             .listen(InputEvent::Button1DoublePress, || {
@@ -227,33 +270,75 @@ fn start() {
             .listen(InputEvent::ButtonRightPress, || {
                 if INPUTS.is_button1_pressed() {
                     let cursor = TRACKER.cursor_tick;
-                    TIMERS.run_action_debounced(
-                        "pitch_up".to_string(),
-                        Duration::from_millis(100),
-                        || {
-                            if let Some(note) = TRACKER.pattern[cursor as usize] {
-                                if note < note_freq.len() - 1 {
-                                    TRACKER.pattern[cursor as usize] = Some(note + 1)
+                    match TRACKER.selected_column {
+                        Column::Note => TIMERS.run_action_debounced(
+                            "pitch_up".to_string(),
+                            Duration::from_millis(100),
+                            || {
+                                if let Some(note) = TRACKER.pattern[cursor as usize] {
+                                    if note.index < note_freq.len() - 1 {
+                                        TRACKER.pattern[cursor as usize] = Some(Note {
+                                            index: note.index + 1,
+                                            ..note
+                                        })
+                                    }
                                 }
-                            }
-                        },
-                    )
+                            },
+                        ),
+                        Column::Instrument => TIMERS.run_action_debounced(
+                            "instrument_next".to_string(),
+                            Duration::from_millis(200),
+                            || {
+                                if let Some(note) = TRACKER.pattern[cursor as usize] {
+                                    if note.instrument < 255 {
+                                        TRACKER.pattern[cursor as usize] = Some(Note {
+                                            instrument: note.instrument + 1,
+                                            ..note
+                                        })
+                                    }
+                                }
+                            },
+                        ),
+                    }
+                } else if TRACKER.selected_column == Column::Note {
+                    TRACKER.selected_column = Column::Instrument;
                 }
             })
             .listen(InputEvent::ButtonLeftPress, || {
                 if INPUTS.is_button1_pressed() {
-                    TIMERS.run_action_debounced(
-                        "pitch_down".to_string(),
-                        Duration::from_millis(100),
-                        || {
-                            let cursor = TRACKER.cursor_tick;
-                            if let Some(note) = TRACKER.pattern[cursor as usize] {
-                                if note != 0 {
-                                    TRACKER.pattern[cursor as usize] = Some(note - 1)
+                    let cursor = TRACKER.cursor_tick;
+                    match TRACKER.selected_column {
+                        Column::Note => TIMERS.run_action_debounced(
+                            "pitch_down".to_string(),
+                            Duration::from_millis(100),
+                            || {
+                                if let Some(note) = TRACKER.pattern[cursor as usize] {
+                                    if note.index != 0 {
+                                        TRACKER.pattern[cursor as usize] = Some(Note {
+                                            index: note.index - 1,
+                                            ..note
+                                        })
+                                    }
                                 }
-                            }
-                        },
-                    )
+                            },
+                        ),
+                        Column::Instrument => TIMERS.run_action_debounced(
+                            "instrument_prev".to_string(),
+                            Duration::from_millis(200),
+                            || {
+                                if let Some(note) = TRACKER.pattern[cursor as usize] {
+                                    if note.instrument > 0 {
+                                        TRACKER.pattern[cursor as usize] = Some(Note {
+                                            instrument: note.instrument - 1,
+                                            ..note
+                                        })
+                                    }
+                                }
+                            },
+                        ),
+                    }
+                } else if TRACKER.selected_column == Column::Instrument {
+                    TRACKER.selected_column = Column::Note;
                 }
             });
     }
@@ -266,34 +351,52 @@ fn update() {
     let cursor: u8;
     unsafe { cursor = TRACKER.cursor_tick };
 
+    let selected_column: Column;
+    unsafe { selected_column = TRACKER.selected_column };
+
     for line in 0..16 {
         text(format!("{:0X}", line), 1, line * 10 + 1);
-        let note: Option<usize>;
+        let note: Option<Note>;
         unsafe {
             note = TRACKER.pattern[line as usize];
         };
-        let name = if let Some(index) = note {
-            note_to_render(usize::from(index))
+        let name = if let Some(note) = note {
+            note_to_render(usize::from(note.index))
         } else {
             "---".to_string()
         };
 
-        if line == cursor.into() {
-            rect(20, line * 10, 8 * 3 + 2, 10);
+        if line == cursor.into() && selected_column == Column::Note {
+            rect(20, line * 10, 8 * 3 + 1, 10);
             set_color(Color::Background);
             text(name, 21, line * 10 + 1);
             set_color(Color::Primary);
         } else {
             text(name, 21, line * 10 + 1);
         };
+
+        let instrument_name = if let Some(note) = note {
+            format!("{:02X}", note.instrument)
+        } else {
+            "--".to_string()
+        };
+        if line == cursor.into() && selected_column == Column::Instrument {
+            rect(50, line * 10, 8 * 2 + 1, 10);
+            set_color(Color::Background);
+            text(instrument_name, 51, line * 10 + 1);
+            set_color(Color::Primary);
+        } else {
+            text(instrument_name, 51, line * 10 + 1);
+        };
     }
 
     set_color(Color::Light);
-    text_bytes(b"nav:       \x86\x87", 50, 54);
-    text_bytes(b"play/stop:  \x81", 50, 64);
-    text_bytes(b"add note:   \x80", 50, 74);
-    text_bytes(b"rm note:   \x80\x80", 50, 84);
-    text_bytes(b"pitch: \x80+\x84\x85\x86\x87", 50, 94);
+    let first_row_y = 108;
+    text_bytes(b"nav:   \x84\x85\x86\x87", 70, first_row_y + 10 * 0);
+    text_bytes(b"play/stop:\x81", 70, first_row_y + 10 * 1);
+    text_bytes(b"add note: \x80", 70, first_row_y + 10 * 2);
+    text_bytes(b"rm note: \x80\x80", 70, first_row_y + 10 * 3);
+    text_bytes(b"edit:\x80+\x84\x85\x86\x87", 70, first_row_y + 10 * 4);
 
     set_color(Color::Primary);
 
