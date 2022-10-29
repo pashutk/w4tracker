@@ -5,7 +5,7 @@ mod notes;
 mod wasm4;
 mod wtime;
 
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, default, time::Duration};
 
 use inputs::{InputEvent, Inputs};
 use notes::{note_c3_index, note_freq, note_from_string, note_to_render, NOTES_PER_OCTAVE};
@@ -18,12 +18,43 @@ struct Note {
     instrument: usize,
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Clone, Copy, Default)]
+enum DutyCycle {
+    #[default]
+    Eighth,
+    Fourth,
+    Half,
+    ThreeFourth,
+}
+
+impl DutyCycle {
+    fn to_flag(&self) -> u32 {
+        match self {
+            Self::Eighth => TONE_MODE1,
+            Self::Fourth => TONE_MODE2,
+            Self::Half => TONE_MODE3,
+            Self::ThreeFourth => TONE_MODE4,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Default)]
+struct Instrument {
+    duty_cycle: DutyCycle,
+    attack: u8,
+    decay: u8,
+    sustain: u8,
+    release: u8,
+}
+
+#[derive(PartialEq, Clone, Copy, Default)]
 enum Column {
+    #[default]
     Note,
     Instrument,
 }
 
+#[derive(Default)]
 struct Tracker {
     frame: u32,
     tick: u8,
@@ -31,6 +62,7 @@ struct Tracker {
     cursor_tick: u8,
     playing: bool,
     selected_column: Column,
+    instruments: [Instrument; 0x1F],
     // also bpm
 }
 
@@ -43,16 +75,18 @@ impl Tracker {
             cursor_tick: 0,
             playing: false,
             selected_column: Column::Note,
+            instruments: [Instrument {
+                duty_cycle: DutyCycle::Eighth,
+                attack: 0,
+                decay: 0,
+                sustain: 0xff,
+                release: 0,
+            }; 0x1f],
         }
     }
 
     fn new() -> Self {
         Tracker {
-            tick: 0,
-            frame: 0,
-            cursor_tick: 0,
-            playing: false,
-            selected_column: Column::Note,
             pattern: [
                 Some(Note {
                     index: note_from_string("C3").unwrap(),
@@ -92,13 +126,21 @@ impl Tracker {
                 }),
                 None,
             ],
+            ..Tracker::empty()
         }
     }
 
     fn play_tick(&self) {
         let pattern_index: usize = self.tick.into();
         if let Some(note) = self.pattern[pattern_index] {
-            tone(note_freq[note.index].into(), 4 | (8 << 8), 100, TONE_PULSE1)
+            let instrument = self.instruments[note.instrument];
+            let duty_cycle = instrument.duty_cycle.to_flag();
+            tone(
+                note_freq[note.index].into(),
+                4 | (8 << 8),
+                100,
+                TONE_PULSE1 | duty_cycle,
+            )
         }
     }
 
