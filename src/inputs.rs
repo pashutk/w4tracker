@@ -54,6 +54,10 @@ impl Inputs {
         self
     }
 
+    pub fn unlisten(&mut self) {
+        self.handlers.clear();
+    }
+
     fn get_last_fire(&self, event: InputEvent) -> Option<&Winstant> {
         let map = self.last_fire.as_ref()?;
         map.get(&event)
