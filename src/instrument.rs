@@ -24,20 +24,20 @@ unsafe fn on_button_down_press() {
             "instrument_value_down".to_string(),
             Duration::from_millis(200),
             || {
-                let mut selected_instrument = *TRACKER.selected_instrument();
+                let selected_instrument = TRACKER.selected_instrument_mut();
 
                 match TRACKER.instrument_focus() {
                     InstrumentInput::Attack => {
-                        selected_instrument.update_attack(|a| a.saturating_add(0x10))
+                        selected_instrument.update_attack(|a| a.saturating_sub(0x10))
                     }
                     InstrumentInput::Decay => {
-                        selected_instrument.update_decay(|a| a.saturating_add(0x10))
+                        selected_instrument.update_decay(|a| a.saturating_sub(0x10))
                     }
                     InstrumentInput::Sustain => {
-                        selected_instrument.update_sustain(|a| a.saturating_add(0x10))
+                        selected_instrument.update_sustain(|a| a.saturating_sub(0x10))
                     }
                     InstrumentInput::Release => {
-                        selected_instrument.update_release(|a| a.saturating_add(0x10))
+                        selected_instrument.update_release(|a| a.saturating_sub(0x10))
                     }
                     _ => {}
                 }
@@ -61,7 +61,7 @@ pub unsafe fn prepare_instrument_screen() {
                     "instrument_value_up".to_string(),
                     Duration::from_millis(200),
                     || {
-                        let mut selected_instrument = *TRACKER.selected_instrument();
+                        let selected_instrument = TRACKER.selected_instrument_mut();
 
                         match TRACKER.instrument_focus() {
                             InstrumentInput::Attack => {
@@ -100,7 +100,7 @@ pub unsafe fn prepare_instrument_screen() {
                     "instrument_value_prev".to_string(),
                     Duration::from_millis(200),
                     || {
-                        let mut selected_instrument = *TRACKER.selected_instrument();
+                        let selected_instrument = TRACKER.selected_instrument_mut();
 
                         match TRACKER.instrument_focus() {
                             InstrumentInput::DutyCycle => {
@@ -129,7 +129,7 @@ pub unsafe fn prepare_instrument_screen() {
                     "instrument_value_next".to_string(),
                     Duration::from_millis(200),
                     || {
-                        let mut selected_instrument = *TRACKER.selected_instrument();
+                        let selected_instrument = TRACKER.selected_instrument_mut();
 
                         match TRACKER.instrument_focus() {
                             InstrumentInput::DutyCycle => {

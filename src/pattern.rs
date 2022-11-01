@@ -17,7 +17,7 @@ pub unsafe fn prepare_pattern_screen() {
                     "pitch_octave_down".to_string(),
                     Duration::from_millis(100),
                     || {
-                        if let Some(mut note) = TRACKER.current_note() {
+                        if let Some(note) = TRACKER.current_note_mut() {
                             note.decrease_octave();
                         }
                     },
@@ -26,6 +26,8 @@ pub unsafe fn prepare_pattern_screen() {
                 TIMERS.run_action_debounced("play".to_string(), Duration::from_millis(200), || {
                     TRACKER.toggle_play()
                 })
+            } else if INPUTS.is_button1_pressed() && TRACKER.selected_column() == Column::Instrument
+            {
             } else {
                 TIMERS.run_action_debounced(
                     "nav_down".to_string(),
@@ -45,11 +47,13 @@ pub unsafe fn prepare_pattern_screen() {
                     "pitch_octave_up".to_string(),
                     Duration::from_millis(100),
                     || {
-                        if let Some(mut note) = TRACKER.current_note() {
+                        if let Some(note) = TRACKER.current_note_mut() {
                             note.increase_octave();
                         }
                     },
                 )
+            } else if INPUTS.is_button1_pressed() && TRACKER.selected_column() == Column::Instrument
+            {
             } else {
                 TIMERS.run_action_debounced(
                     "nav_up".to_string(),
@@ -90,24 +94,22 @@ pub unsafe fn prepare_pattern_screen() {
                         "instrument_next".to_string(),
                         Duration::from_millis(200),
                         || {
-                            if let Some(mut note) = TRACKER.current_note() {
-                                note.increase_pitch();
+                            if let Some(note) = TRACKER.current_note_mut() {
+                                note.next_instrument();
                             }
                         },
                     ),
                 };
-                trace(
-                    TRACKER
-                        .current_note()
-                        .map(|a| a.note_index())
-                        .unwrap_or(0)
-                        .to_string(),
-                );
             } else if INPUTS.is_button2_pressed() {
                 TIMERS.run_action_debounced(
                     "nav_to_instrument".to_string(),
                     Duration::from_millis(200),
-                    || go_to_instrument_screen(),
+                    || {
+                        if let Some(note) = TRACKER.current_note() {
+                            TRACKER.set_selected_instrument_index(note.instrument_index());
+                        }
+                        go_to_instrument_screen();
+                    },
                 );
             } else if TRACKER.selected_column() == Column::Note {
                 TRACKER.set_selected_column(Column::Instrument);
@@ -120,7 +122,7 @@ pub unsafe fn prepare_pattern_screen() {
                         "pitch_down".to_string(),
                         Duration::from_millis(100),
                         || {
-                            if let Some(mut note) = TRACKER.current_note() {
+                            if let Some(note) = TRACKER.current_note_mut() {
                                 note.decrease_pitch()
                             }
                         },
@@ -129,12 +131,13 @@ pub unsafe fn prepare_pattern_screen() {
                         "instrument_prev".to_string(),
                         Duration::from_millis(200),
                         || {
-                            if let Some(mut note) = TRACKER.current_note() {
+                            if let Some(note) = TRACKER.current_note_mut() {
                                 note.prev_instrument()
                             }
                         },
                     ),
                 }
+            } else if INPUTS.is_button2_pressed() {
             } else if TRACKER.selected_column() == Column::Instrument {
                 TRACKER.set_selected_column(Column::Note);
             }

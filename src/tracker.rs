@@ -36,7 +36,7 @@ impl Note {
     pub fn increase_octave(&mut self) {
         let max_value: usize = note_freq.len() - NOTES_PER_OCTAVE as usize;
         if self.index < max_value {
-            self.index = self.index - NOTES_PER_OCTAVE as usize;
+            self.index = self.index + NOTES_PER_OCTAVE as usize;
         } else {
             self.index = note_freq.len();
         }
@@ -51,14 +51,14 @@ impl Note {
     }
 
     pub fn next_instrument(&mut self) {
-        if self.index < note_freq.len() - 1 {
-            self.index += 1;
+        if self.instrument < 0x1F {
+            self.instrument += 1;
         }
     }
 
     pub fn prev_instrument(&mut self) {
-        if self.index > 0 {
-            self.index -= 1;
+        if self.instrument > 0 {
+            self.instrument -= 1;
         }
     }
 
@@ -339,6 +339,10 @@ impl Tracker {
 
     pub fn selected_instrument(&self) -> &Instrument {
         &self.instruments[self.selected_instrument_index]
+    }
+
+    pub fn selected_instrument_mut(&mut self) -> &mut Instrument {
+        &mut self.instruments[self.selected_instrument_index]
     }
 
     pub fn selected_instrument_index(&self) -> usize {
