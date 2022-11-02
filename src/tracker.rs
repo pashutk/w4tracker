@@ -1,6 +1,7 @@
 use std::borrow::BorrowMut;
 
 use crate::{
+    channel::Channel,
     instrument::InstrumentInput,
     notes::{note_c3_index, note_freq, note_from_string, NOTES_PER_OCTAVE},
     screen::Screen,
@@ -193,6 +194,8 @@ pub struct Tracker {
     screen: Screen,
     selected_instrument_index: usize,
     instrument_focus: InstrumentInput,
+    selected_channel: Channel,
+    song_cursor_row_index: usize,
     // also bpm
 }
 
@@ -215,6 +218,8 @@ impl Tracker {
             screen: Screen::Pattern,
             selected_instrument_index: 0,
             instrument_focus: InstrumentInput::DutyCycle,
+            selected_channel: Channel::Pulse1,
+            song_cursor_row_index: 0,
         }
     }
 
@@ -408,6 +413,36 @@ impl Tracker {
 
     pub fn note_at(&self, index: usize) -> Option<Note> {
         self.pattern.get(index).and_then(|a| *a)
+    }
+
+    pub fn selected_channel(&self) -> &Channel {
+        &self.selected_channel
+    }
+
+    pub fn next_channel(&mut self) {
+        self.selected_channel = self.selected_channel.next()
+    }
+
+    pub fn prev_channel(&mut self) {
+        self.selected_channel = self.selected_channel.prev()
+    }
+
+    pub fn song_cursor_row(&self) -> usize {
+        self.song_cursor_row_index
+    }
+
+    pub fn next_row_song_cursor(&mut self) {
+        self.song_cursor_row_index = match self.song_cursor_row_index {
+            x @ 0..=2 => x + 1,
+            _ => 3,
+        }
+    }
+
+    pub fn prev_row_song_cursor(&mut self) {
+        self.song_cursor_row_index = match self.song_cursor_row_index {
+            0 => 0,
+            x @ _ => x - 1,
+        }
     }
 }
 

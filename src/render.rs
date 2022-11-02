@@ -1,4 +1,5 @@
 use crate::{
+    channel::Channel,
     instrument::InstrumentInput,
     notes::note_to_render,
     tracker::{Column, DutyCycle, Tracker},
@@ -168,6 +169,46 @@ pub fn instrument_screen(tracker: &Tracker) {
         instrument.release(),
         InstrumentInput::Release,
     );
+}
+
+pub fn song_screen(tracker: &Tracker) {
+    set_color(Color::Primary);
+
+    impl Channel {
+        fn to_x(&self) -> i32 {
+            let x0 = 30;
+            let d = 30;
+            match self {
+                Channel::Pulse1 => x0,
+                Channel::Pulse2 => x0 + d,
+                Channel::Triangle => x0 + d * 2,
+                Channel::Noise => x0 + d * 3,
+            }
+        }
+    }
+
+    text("P1", Channel::Pulse1.to_x(), 10);
+    text("P2", Channel::Pulse2.to_x(), 10);
+    text("TR", Channel::Triangle.to_x(), 10);
+    text("NS", Channel::Noise.to_x(), 10);
+
+    let selected_channel = tracker.selected_channel();
+    let row = tracker.song_cursor_row();
+    for channel in Channel::iterator() {
+        let x = channel.to_x();
+        for line in 0..4 {
+            let y: i32 = 30 + line as i32 * 10;
+            if *selected_channel == channel && line == row {
+                set_color(Color::Primary);
+                rect(x - 1, y - 1, 18, 9);
+                set_color(Color::Background);
+                text("--", x, y);
+                set_color(Color::Primary);
+            } else {
+                text("--", x, y);
+            }
+        }
+    }
 }
 
 pub fn not_implemented_screen() {

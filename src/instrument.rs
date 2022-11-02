@@ -97,7 +97,7 @@ fn on_button_left_press(inputs: &Inputs) {
     unsafe {
         if inputs.is_button2_pressed() {
             TIMERS.run_action_debounced(
-                "nav_to_pattern".to_string(),
+                "nav_prev_screen".to_string(),
                 Duration::from_millis(200),
                 || go_to_pattern_screen(),
             );

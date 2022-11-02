@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::{
     inputs::{InputEvent, Inputs},
-    navigation::go_to_instrument_screen,
+    navigation::{go_to_instrument_screen, go_to_song_screen},
     timers::TIMERS,
     tracker::{Column, Note, TRACKER},
     INPUTS,
@@ -102,7 +102,7 @@ fn on_button_right_press(inputs: &Inputs) {
             };
         } else if inputs.is_button2_pressed() {
             TIMERS.run_action_debounced(
-                "nav_to_instrument".to_string(),
+                "nav_next_screen".to_string(),
                 Duration::from_millis(200),
                 || {
                     if let Some(note) = TRACKER.current_note() {
@@ -141,6 +141,13 @@ fn on_button_left_press(inputs: &Inputs) {
                 ),
             }
         } else if inputs.is_button2_pressed() {
+            TIMERS.run_action_debounced(
+                "nav_prev_screen".to_string(),
+                Duration::from_millis(200),
+                || {
+                    go_to_song_screen();
+                },
+            );
         } else if TRACKER.selected_column() == Column::Instrument {
             TRACKER.set_selected_column(Column::Note);
         }
