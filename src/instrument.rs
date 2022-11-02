@@ -1,8 +1,7 @@
-use std::{borrow::BorrowMut, time::Duration};
+use std::time::Duration;
 
 use crate::{
-    inputs::InputEvent, navigation::go_to_pattern_screen, screen::Screen, timers::TIMERS,
-    tracker::TRACKER, INPUTS,
+    inputs::InputEvent, navigation::go_to_pattern_screen, timers::TIMERS, tracker::TRACKER, INPUTS,
 };
 
 #[derive(Clone, Copy, PartialEq)]
