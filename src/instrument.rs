@@ -1,7 +1,11 @@
 use std::time::Duration;
 
 use crate::{
-    inputs::InputEvent, navigation::go_to_pattern_screen, timers::TIMERS, tracker::TRACKER, INPUTS,
+    inputs::{InputEvent, Inputs},
+    navigation::go_to_pattern_screen,
+    timers::TIMERS,
+    tracker::TRACKER,
+    INPUTS,
 };
 
 #[derive(Clone, Copy, PartialEq)]
@@ -13,13 +17,13 @@ pub enum InstrumentInput {
     Release,
 }
 
-fn on_button_down_press() {
+fn on_button_down_press(inputs: &Inputs) {
     unsafe {
-        if INPUTS.is_button2_pressed() {
+        if inputs.is_button2_pressed() {
             TIMERS.run_action_debounced("play".to_string(), Duration::from_millis(200), || {
                 TRACKER.toggle_play()
             })
-        } else if INPUTS.is_button1_pressed() {
+        } else if inputs.is_button1_pressed() {
             TIMERS.run_action_debounced(
                 "instrument_value_down".to_string(),
                 Duration::from_millis(200),
@@ -53,9 +57,9 @@ fn on_button_down_press() {
     }
 }
 
-fn on_button_up_press() {
+fn on_button_up_press(inputs: &Inputs) {
     unsafe {
-        if INPUTS.is_button1_pressed() {
+        if inputs.is_button1_pressed() {
             TIMERS.run_action_debounced(
                 "instrument_value_up".to_string(),
                 Duration::from_millis(200),
@@ -89,15 +93,15 @@ fn on_button_up_press() {
     }
 }
 
-fn on_button_left_press() {
+fn on_button_left_press(inputs: &Inputs) {
     unsafe {
-        if INPUTS.is_button2_pressed() {
+        if inputs.is_button2_pressed() {
             TIMERS.run_action_debounced(
                 "nav_to_pattern".to_string(),
                 Duration::from_millis(200),
                 || go_to_pattern_screen(),
             );
-        } else if INPUTS.is_button1_pressed() {
+        } else if inputs.is_button1_pressed() {
             TIMERS.run_action_debounced(
                 "instrument_value_prev".to_string(),
                 Duration::from_millis(200),
@@ -127,9 +131,9 @@ fn on_button_left_press() {
     }
 }
 
-fn on_button_right_press() {
+fn on_button_right_press(inputs: &Inputs) {
     unsafe {
-        if INPUTS.is_button1_pressed() {
+        if inputs.is_button1_pressed() {
             TIMERS.run_action_debounced(
                 "instrument_value_next".to_string(),
                 Duration::from_millis(200),

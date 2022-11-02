@@ -1,17 +1,16 @@
 use std::time::Duration;
 
 use crate::{
-    inputs::InputEvent,
+    inputs::{InputEvent, Inputs},
     navigation::go_to_instrument_screen,
     timers::TIMERS,
     tracker::{Column, Note, TRACKER},
-    wasm4::trace,
     INPUTS,
 };
 
-fn on_button_down_press() {
+fn on_button_down_press(inputs: &Inputs) {
     unsafe {
-        if INPUTS.is_button1_pressed() && TRACKER.selected_column() == Column::Note {
+        if inputs.is_button1_pressed() && TRACKER.selected_column() == Column::Note {
             TIMERS.run_action_debounced(
                 "pitch_octave_down".to_string(),
                 Duration::from_millis(100),
@@ -21,11 +20,11 @@ fn on_button_down_press() {
                     }
                 },
             )
-        } else if INPUTS.is_button2_pressed() {
+        } else if inputs.is_button2_pressed() {
             TIMERS.run_action_debounced("play".to_string(), Duration::from_millis(200), || {
                 TRACKER.toggle_play()
             })
-        } else if INPUTS.is_button1_pressed() && TRACKER.selected_column() == Column::Instrument {
+        } else if inputs.is_button1_pressed() && TRACKER.selected_column() == Column::Instrument {
         } else {
             TIMERS.run_action_debounced("nav_down".to_string(), Duration::from_millis(100), || {
                 TRACKER.saturating_increase_cursor_tick();
@@ -37,9 +36,9 @@ fn on_button_down_press() {
     }
 }
 
-fn on_button_up_press() {
+fn on_button_up_press(inputs: &Inputs) {
     unsafe {
-        if INPUTS.is_button1_pressed() && TRACKER.selected_column() == Column::Note {
+        if inputs.is_button1_pressed() && TRACKER.selected_column() == Column::Note {
             TIMERS.run_action_debounced(
                 "pitch_octave_up".to_string(),
                 Duration::from_millis(100),
@@ -49,7 +48,7 @@ fn on_button_up_press() {
                     }
                 },
             )
-        } else if INPUTS.is_button1_pressed() && TRACKER.selected_column() == Column::Instrument {
+        } else if inputs.is_button1_pressed() && TRACKER.selected_column() == Column::Instrument {
         } else {
             TIMERS.run_action_debounced("nav_up".to_string(), Duration::from_millis(100), || {
                 TRACKER.saturating_decrease_cursor_tick();
@@ -61,7 +60,7 @@ fn on_button_up_press() {
     }
 }
 
-fn on_button_1_press() {
+fn on_button_1_press(inputs: &Inputs) {
     unsafe {
         if let None = TRACKER.current_note() {
             let new_note = Note::new();
@@ -70,7 +69,7 @@ fn on_button_1_press() {
     }
 }
 
-fn on_button_1_double_press() {
+fn on_button_1_double_press(inputs: &Inputs) {
     unsafe {
         if let Some(_) = TRACKER.current_note() {
             TRACKER.set_current_note(&None);
@@ -78,9 +77,9 @@ fn on_button_1_double_press() {
     }
 }
 
-fn on_button_right_press() {
+fn on_button_right_press(inputs: &Inputs) {
     unsafe {
-        if INPUTS.is_button1_pressed() {
+        if inputs.is_button1_pressed() {
             match TRACKER.selected_column() {
                 Column::Note => TIMERS.run_action_debounced(
                     "pitch_up".to_string(),
@@ -101,7 +100,7 @@ fn on_button_right_press() {
                     },
                 ),
             };
-        } else if INPUTS.is_button2_pressed() {
+        } else if inputs.is_button2_pressed() {
             TIMERS.run_action_debounced(
                 "nav_to_instrument".to_string(),
                 Duration::from_millis(200),
@@ -118,9 +117,9 @@ fn on_button_right_press() {
     }
 }
 
-fn on_button_left_press() {
+fn on_button_left_press(inputs: &Inputs) {
     unsafe {
-        if INPUTS.is_button1_pressed() {
+        if inputs.is_button1_pressed() {
             match TRACKER.selected_column() {
                 Column::Note => TIMERS.run_action_debounced(
                     "pitch_down".to_string(),
@@ -141,7 +140,7 @@ fn on_button_left_press() {
                     },
                 ),
             }
-        } else if INPUTS.is_button2_pressed() {
+        } else if inputs.is_button2_pressed() {
         } else if TRACKER.selected_column() == Column::Instrument {
             TRACKER.set_selected_column(Column::Note);
         }

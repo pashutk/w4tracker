@@ -17,7 +17,7 @@ pub enum InputEvent {
 }
 
 struct StoredHandler {
-    handler: Box<dyn Fn()>,
+    handler: Box<dyn Fn(&Inputs)>,
     event: InputEvent,
 }
 
@@ -43,7 +43,7 @@ impl Inputs {
         self.initialized = true;
     }
 
-    pub fn listen(&mut self, event: InputEvent, handler: impl Fn() + 'static) -> &mut Self {
+    pub fn listen(&mut self, event: InputEvent, handler: impl Fn(&Self) + 'static) -> &mut Self {
         self.handlers.push(StoredHandler {
             handler: Box::new(handler),
             event,
@@ -70,7 +70,7 @@ impl Inputs {
                 InputEvent::Button1Press
                     if self.is_button1_pressed() && !self.double_press_activated =>
                 {
-                    handler()
+                    handler(&self)
                 }
                 InputEvent::Button1DoublePress if self.is_button1_pressed() => {
                     if let Some(last) = self.get_last_fire(InputEvent::Button1Press) {
@@ -78,16 +78,16 @@ impl Inputs {
                         let max = *last + Duration::from_millis(200);
                         let min = *last + Duration::from_frames(2);
                         if now < max && now > min {
-                            handler();
+                            handler(&self);
                             self.double_press_activated = true;
                         }
                     }
                 }
-                InputEvent::Button2Press if self.is_button2_pressed() => handler(),
-                InputEvent::ButtonDownPress if gamepad & BUTTON_DOWN != 0 => handler(),
-                InputEvent::ButtonUpPress if gamepad & BUTTON_UP != 0 => handler(),
-                InputEvent::ButtonLeftPress if gamepad & BUTTON_LEFT != 0 => handler(),
-                InputEvent::ButtonRightPress if gamepad & BUTTON_RIGHT != 0 => handler(),
+                InputEvent::Button2Press if self.is_button2_pressed() => handler(&self),
+                InputEvent::ButtonDownPress if gamepad & BUTTON_DOWN != 0 => handler(&self),
+                InputEvent::ButtonUpPress if gamepad & BUTTON_UP != 0 => handler(&self),
+                InputEvent::ButtonLeftPress if gamepad & BUTTON_LEFT != 0 => handler(&self),
+                InputEvent::ButtonRightPress if gamepad & BUTTON_RIGHT != 0 => handler(&self),
                 _ => {}
             }
         }
