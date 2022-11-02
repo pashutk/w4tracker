@@ -43,10 +43,7 @@ impl Inputs {
         self.initialized = true;
     }
 
-    pub fn listen<F>(&mut self, event: InputEvent, handler: F) -> &mut Self
-    where
-        F: Fn() + 'static,
-    {
+    pub fn listen(&mut self, event: InputEvent, handler: impl Fn() + 'static) -> &mut Self {
         self.handlers.push(StoredHandler {
             handler: Box::new(handler),
             event,
