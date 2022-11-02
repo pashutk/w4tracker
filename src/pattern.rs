@@ -147,8 +147,8 @@ fn on_button_left_press(inputs: &Inputs) {
     }
 }
 
-pub unsafe fn prepare_pattern_screen() {
-    INPUTS
+pub fn add_pattern_screen_handlers(inputs: &mut Inputs) {
+    inputs
         .listen(InputEvent::ButtonDownPress, on_button_down_press)
         .listen(InputEvent::ButtonUpPress, on_button_up_press)
         .listen(InputEvent::Button1Press, on_button_1_press)

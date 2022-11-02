@@ -13,7 +13,7 @@ mod wasm4;
 mod wtime;
 
 use inputs::Inputs;
-use pattern::prepare_pattern_screen;
+use pattern::add_pattern_screen_handlers;
 use screen::Screen;
 use timers::TIMERS;
 use tracker::{Tracker, TRACKER};
@@ -25,7 +25,7 @@ static mut INPUTS: Inputs = Inputs::new();
 unsafe fn start() {
     TRACKER = Tracker::new();
     TIMERS.init();
-    prepare_pattern_screen();
+    add_pattern_screen_handlers(&mut INPUTS);
 }
 
 #[no_mangle]

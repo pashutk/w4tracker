@@ -163,8 +163,8 @@ fn on_button_right_press(inputs: &Inputs) {
     }
 }
 
-pub unsafe fn prepare_instrument_screen() {
-    INPUTS
+pub fn add_instrument_screen_handlers(inputs: &mut Inputs) {
+    inputs
         .listen(InputEvent::ButtonDownPress, on_button_down_press)
         .listen(InputEvent::ButtonUpPress, on_button_up_press)
         .listen(InputEvent::ButtonLeftPress, on_button_left_press)

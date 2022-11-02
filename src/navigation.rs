@@ -1,16 +1,16 @@
 use crate::{
-    instrument::prepare_instrument_screen, prepare_pattern_screen, screen::Screen,
+    add_pattern_screen_handlers, instrument::add_instrument_screen_handlers, screen::Screen,
     tracker::TRACKER, INPUTS,
 };
 
 pub unsafe fn go_to_pattern_screen() {
     TRACKER.set_screen(Screen::Pattern);
     INPUTS.unlisten();
-    prepare_pattern_screen();
+    add_pattern_screen_handlers(&mut INPUTS);
 }
 
 pub unsafe fn go_to_instrument_screen() {
     TRACKER.set_screen(Screen::Instrument);
     INPUTS.unlisten();
-    prepare_instrument_screen();
+    add_instrument_screen_handlers(&mut INPUTS);
 }
