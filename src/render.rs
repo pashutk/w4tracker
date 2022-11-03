@@ -198,14 +198,18 @@ pub fn song_screen(tracker: &Tracker) {
         let x = channel.to_x();
         for line in 0..4 {
             let y: i32 = 30 + line as i32 * 10;
+            let val = match tracker.song()[line].channel(&channel) {
+                Some(index) => format!("{:02X}", index),
+                None => "--".to_string(),
+            };
             if *selected_channel == channel && line == row {
                 set_color(Color::Primary);
                 rect(x - 1, y - 1, 18, 9);
                 set_color(Color::Background);
-                text("--", x, y);
+                text(val, x, y);
                 set_color(Color::Primary);
             } else {
-                text("--", x, y);
+                text(val, x, y);
             }
         }
     }

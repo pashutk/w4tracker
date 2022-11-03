@@ -183,6 +183,79 @@ pub enum Column {
     Instrument,
 }
 
+#[derive(PartialEq, Clone, Copy)]
+pub struct Row {
+    pulse1: Option<usize>,
+    pulse2: Option<usize>,
+    triangle: Option<usize>,
+    noise: Option<usize>,
+}
+
+const MAX_PATTERNS: usize = 0x1F;
+
+impl Row {
+    pub fn channel(&self, channel: &Channel) -> &Option<usize> {
+        match channel {
+            Channel::Pulse1 => &self.pulse1,
+            Channel::Pulse2 => &self.pulse2,
+            Channel::Triangle => &self.triangle,
+            Channel::Noise => &self.noise,
+        }
+    }
+
+    pub fn channel_mut(&mut self, channel: &Channel) -> &mut Option<usize> {
+        match channel {
+            Channel::Pulse1 => &mut self.pulse1,
+            Channel::Pulse2 => &mut self.pulse2,
+            Channel::Triangle => &mut self.triangle,
+            Channel::Noise => &mut self.noise,
+        }
+    }
+
+    pub fn set_channel_value(&mut self, channel: &Channel, value: Option<usize>) {
+        match channel {
+            Channel::Pulse1 => self.pulse1 = value,
+            Channel::Pulse2 => self.pulse2 = value,
+            Channel::Triangle => self.triangle = value,
+            Channel::Noise => self.noise = value,
+        }
+    }
+
+    pub fn increment_channel_value(&mut self, channel: &Channel) {
+        match channel {
+            Channel::Pulse1 => {
+                self.pulse1 = self
+                    .pulse1
+                    .map(|a| if a < MAX_PATTERNS { a + 1 } else { a })
+            }
+            Channel::Pulse2 => {
+                self.pulse2 = self
+                    .pulse2
+                    .map(|a| if a < MAX_PATTERNS { a + 1 } else { a })
+            }
+            Channel::Triangle => {
+                self.triangle = self
+                    .triangle
+                    .map(|a| if a < MAX_PATTERNS { a + 1 } else { a })
+            }
+            Channel::Noise => {
+                self.noise = self.noise.map(|a| if a < MAX_PATTERNS { a + 1 } else { a })
+            }
+        }
+    }
+
+    pub fn decrement_channel_value(&mut self, channel: &Channel) {
+        match channel {
+            Channel::Pulse1 => self.pulse1 = self.pulse1.map(|a| if a > 0 { a - 1 } else { 0 }),
+            Channel::Pulse2 => self.pulse2 = self.pulse2.map(|a| if a > 0 { a - 1 } else { 0 }),
+            Channel::Triangle => {
+                self.triangle = self.triangle.map(|a| if a > 0 { a - 1 } else { 0 })
+            }
+            Channel::Noise => self.noise = self.noise.map(|a| if a > 0 { a - 1 } else { 0 }),
+        }
+    }
+}
+
 pub struct Tracker {
     frame: u32,
     tick: u8,
@@ -196,7 +269,7 @@ pub struct Tracker {
     instrument_focus: InstrumentInput,
     selected_channel: Channel,
     song_cursor_row_index: usize,
-    // also bpm
+    song: [Row; 4], // also bpm
 }
 
 impl Tracker {
@@ -220,6 +293,12 @@ impl Tracker {
             instrument_focus: InstrumentInput::DutyCycle,
             selected_channel: Channel::Pulse1,
             song_cursor_row_index: 0,
+            song: [Row {
+                pulse1: None,
+                pulse2: None,
+                triangle: None,
+                noise: None,
+            }; 4],
         }
     }
 
@@ -443,6 +522,14 @@ impl Tracker {
             0 => 0,
             x @ _ => x - 1,
         }
+    }
+
+    pub fn song(&self) -> &[Row; 4] {
+        &self.song
+    }
+
+    pub fn song_mut(&mut self) -> &mut [Row; 4] {
+        &mut self.song
     }
 }
 

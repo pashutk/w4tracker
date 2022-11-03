@@ -17,7 +17,7 @@ mod wtime;
 use inputs::Inputs;
 use pattern::add_pattern_screen_handlers;
 use screen::Screen;
-use song::add_song_screen_handlers;
+// use song::add_song_screen_handlers;
 use timers::TIMERS;
 use tracker::{Tracker, TRACKER};
 use wtime::Winstant;
