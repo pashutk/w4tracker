@@ -259,7 +259,7 @@ impl Row {
 pub struct Tracker {
     frame: u32,
     tick: u8,
-    pattern: [Option<Note>; 16],
+    patterns: Vec<[Option<Note>; 16]>,
     cursor_tick: u8,
     playing: bool,
     selected_column: Column,
@@ -278,7 +278,7 @@ impl Tracker {
         Tracker {
             frame: 0,
             tick: 0,
-            pattern: [None; 16],
+            patterns: vec![],
             cursor_tick: 0,
             playing: false,
             selected_column: Column::Note,
@@ -306,45 +306,7 @@ impl Tracker {
 
     pub fn new() -> Self {
         Tracker {
-            pattern: [
-                Some(Note {
-                    index: note_from_string("C3").unwrap(),
-                    instrument: 0,
-                }),
-                Some(Note {
-                    index: note_from_string("C3").unwrap(),
-                    instrument: 1,
-                }),
-                Some(Note {
-                    index: note_from_string("C4").unwrap(),
-                    instrument: 11,
-                }),
-                None,
-                Some(Note {
-                    index: note_from_string("G3").unwrap(),
-                    instrument: 0,
-                }),
-                None,
-                None,
-                Some(Note {
-                    index: note_from_string("F#3").unwrap(),
-                    instrument: 0,
-                }),
-                None,
-                None,
-                Some(Note {
-                    index: note_from_string("F3").unwrap(),
-                    instrument: 0,
-                }),
-                None,
-                None,
-                None,
-                Some(Note {
-                    index: note_from_string("D#3").unwrap(),
-                    instrument: 0,
-                }),
-                None,
-            ],
+            patterns: vec![[None; 16]; MAX_PATTERNS],
             ..Tracker::empty()
         }
     }
@@ -359,7 +321,7 @@ impl Tracker {
 
     fn play_tick(&self) {
         let pattern_index: usize = self.tick.into();
-        if let Some(note) = self.pattern[pattern_index] {
+        if let Some(note) = self.patterns[self.selected_pattern][pattern_index] {
             let instrument = self.instruments[note.instrument];
             let duty_cycle = instrument.duty_cycle.to_flag();
             let attack: u32 = instrument.attack.into();
@@ -472,15 +434,15 @@ impl Tracker {
     }
 
     pub fn current_note(&self) -> &Option<Note> {
-        &self.pattern[self.cursor_tick as usize]
+        &self.patterns[self.selected_pattern][self.cursor_tick as usize]
     }
 
     pub fn current_note_mut(&mut self) -> &mut Option<Note> {
-        &mut self.pattern[self.cursor_tick as usize]
+        &mut self.patterns[self.selected_pattern][self.cursor_tick as usize]
     }
 
     pub fn set_current_note(&mut self, note: &Option<Note>) {
-        self.pattern[self.cursor_tick as usize] = *note
+        self.patterns[self.selected_pattern][self.cursor_tick as usize] = *note
     }
 
     pub fn update_current_note<F>(&mut self, f: F)
@@ -493,7 +455,9 @@ impl Tracker {
     }
 
     pub fn note_at(&self, index: usize) -> Option<Note> {
-        self.pattern.get(index).and_then(|a| *a)
+        self.patterns[self.selected_pattern]
+            .get(index)
+            .and_then(|a| *a)
     }
 
     pub fn selected_channel(&self) -> &Channel {
@@ -536,6 +500,10 @@ impl Tracker {
 
     pub fn selected_pattern(&self) -> usize {
         self.selected_pattern
+    }
+
+    pub fn set_selected_pattern(&mut self, index: usize) {
+        self.selected_pattern = index;
     }
 }
 

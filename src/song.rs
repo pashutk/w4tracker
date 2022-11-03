@@ -1,13 +1,10 @@
 use std::time::Duration;
 
 use crate::{
-    channel::Channel,
     inputs::{InputEvent, Inputs},
     navigation::go_to_pattern_screen,
     timers::TIMERS,
     tracker::TRACKER,
-    wasm4::trace,
-    INPUTS,
 };
 
 fn on_button_down_press(inputs: &Inputs) {
@@ -74,7 +71,18 @@ fn on_button_right_press(inputs: &Inputs) {
             TIMERS.run_action_debounced(
                 "nav_next_screen".to_string(),
                 Duration::from_millis(200),
-                || go_to_pattern_screen(),
+                || {
+                    let selected_row = TRACKER.song_cursor_row();
+                    let song = TRACKER.song();
+                    let row = song.get(selected_row);
+                    let selected_channel = TRACKER.selected_channel();
+                    let selected_pattern = match row {
+                        Some(r) => r.channel(selected_channel).unwrap_or(0),
+                        None => 0,
+                    };
+                    TRACKER.set_selected_pattern(selected_pattern);
+                    go_to_pattern_screen();
+                },
             );
         } else if inputs.is_button1_pressed() {
             TIMERS.run_action_debounced(
