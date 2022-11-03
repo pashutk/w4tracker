@@ -28,6 +28,9 @@ pub fn pattern_screen(tracker: &Tracker) {
     let cursor = tracker.cursor_tick();
     let selected_column = tracker.selected_column();
 
+    let pattern = tracker.selected_pattern();
+    text(format!("Pattern {:02X}", pattern), 80, 1);
+
     for line in 0..16 {
         text(format!("{:0X}", line), 1, line * 10 + 1);
 

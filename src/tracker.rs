@@ -270,6 +270,7 @@ pub struct Tracker {
     selected_channel: Channel,
     song_cursor_row_index: usize,
     song: [Row; 4], // also bpm
+    selected_pattern: usize,
 }
 
 impl Tracker {
@@ -299,6 +300,7 @@ impl Tracker {
                 triangle: None,
                 noise: None,
             }; 4],
+            selected_pattern: 0,
         }
     }
 
@@ -530,6 +532,10 @@ impl Tracker {
 
     pub fn song_mut(&mut self) -> &mut [Row; 4] {
         &mut self.song
+    }
+
+    pub fn selected_pattern(&self) -> usize {
+        self.selected_pattern
     }
 }
 
