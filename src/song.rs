@@ -4,14 +4,14 @@ use crate::{
     inputs::{InputEvent, Inputs},
     navigation::go_to_pattern_screen,
     timers::TIMERS,
-    tracker::TRACKER,
+    tracker::{PlayMode, TRACKER},
 };
 
 fn on_button_down_press(inputs: &Inputs) {
     unsafe {
         if inputs.is_button2_pressed() {
             TIMERS.run_action_debounced("play".to_string(), Duration::from_millis(200), || {
-                TRACKER.toggle_play()
+                TRACKER.toggle_play(PlayMode::Song)
             })
         } else if inputs.is_button1_pressed() {
         } else {

@@ -1,6 +1,6 @@
 use crate::{
-    add_pattern_screen_handlers, instrument::add_instrument_screen_handlers, screen::Screen,
-    song::add_song_screen_handlers, tracker::TRACKER, INPUTS,
+    instrument::add_instrument_screen_handlers, pattern::add_pattern_screen_handlers,
+    screen::Screen, song::add_song_screen_handlers, tracker::TRACKER, INPUTS,
 };
 
 pub unsafe fn go_to_pattern_screen() {

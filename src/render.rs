@@ -2,7 +2,7 @@ use crate::{
     channel::Channel,
     instrument::InstrumentInput,
     notes::note_to_render,
-    tracker::{Column, DutyCycle, Tracker},
+    tracker::{Column, DutyCycle, PlayMode, Tracker},
     wasm4::{hline, rect, text, text_bytes, vline, DRAW_COLORS},
 };
 
@@ -201,6 +201,7 @@ pub fn song_screen(tracker: &Tracker) {
         let x = channel.to_x();
         for line in 0..4 {
             let y: i32 = 30 + line as i32 * 10;
+
             let val = match tracker.song()[line].channel(&channel) {
                 Some(index) => format!("{:02X}", index),
                 None => "--".to_string(),
@@ -213,6 +214,12 @@ pub fn song_screen(tracker: &Tracker) {
                 set_color(Color::Primary);
             } else {
                 text(val, x, y);
+            }
+
+            if let PlayMode::Song = tracker.play_mode() {
+                if tracker.song_tick() == line {
+                    text(">", x - 10, y);
+                }
             }
         }
     }

@@ -5,7 +5,10 @@ use crate::{
     instrument::InstrumentInput,
     notes::{note_c3_index, note_freq, note_from_string, NOTES_PER_OCTAVE},
     screen::Screen,
-    wasm4::{tone, trace, TONE_MODE1, TONE_MODE2, TONE_MODE3, TONE_MODE4, TONE_PULSE1},
+    wasm4::{
+        tone, trace, TONE_MODE1, TONE_MODE2, TONE_MODE3, TONE_MODE4, TONE_NOISE, TONE_PULSE1,
+        TONE_PULSE2, TONE_TRIANGLE,
+    },
 };
 
 #[derive(Clone, Copy)]
@@ -256,12 +259,18 @@ impl Row {
     }
 }
 
+pub enum PlayMode {
+    Song,
+    Pattern,
+    Idle,
+}
+
 pub struct Tracker {
     frame: u32,
     tick: u8,
     patterns: Vec<[Option<Note>; 16]>,
     cursor_tick: u8,
-    playing: bool,
+    play: PlayMode,
     selected_column: Column,
     instruments: [Instrument; 0x1F],
     screen: Screen,
@@ -271,6 +280,7 @@ pub struct Tracker {
     song_cursor_row_index: usize,
     song: [Row; 4], // also bpm
     selected_pattern: usize,
+    song_tick: usize,
 }
 
 impl Tracker {
@@ -280,7 +290,7 @@ impl Tracker {
             tick: 0,
             patterns: vec![],
             cursor_tick: 0,
-            playing: false,
+            play: PlayMode::Idle,
             selected_column: Column::Note,
             instruments: [Instrument {
                 duty_cycle: DutyCycle::Eighth,
@@ -301,6 +311,7 @@ impl Tracker {
                 noise: None,
             }; 4],
             selected_pattern: 0,
+            song_tick: 0,
         }
     }
 
@@ -320,33 +331,114 @@ impl Tracker {
     }
 
     fn play_tick(&self) {
-        let pattern_index: usize = self.tick.into();
-        if let Some(note) = self.patterns[self.selected_pattern][pattern_index] {
-            let instrument = self.instruments[note.instrument];
-            let duty_cycle = instrument.duty_cycle.to_flag();
-            let attack: u32 = instrument.attack.into();
-            let decay: u32 = instrument.decay.into();
-            let sustain: u32 = instrument.sustain.into();
-            let release: u32 = instrument.release.into();
-            tone(
-                note_freq[note.index].into(),
-                attack << 24 | decay << 16 | sustain | release << 8,
-                100,
-                TONE_PULSE1 | duty_cycle,
-            )
-        }
+        match self.play {
+            PlayMode::Song => {
+                let pattern_index: usize = self.tick.into();
+                let song = self.song;
+                let row = song[self.song_tick];
+                if let Some(note) = row.pulse1.and_then(|pulse1_pattern_index| {
+                    self.patterns[pulse1_pattern_index][pattern_index]
+                }) {
+                    let instrument = self.instruments[note.instrument];
+                    let duty_cycle = instrument.duty_cycle.to_flag();
+                    let attack: u32 = instrument.attack.into();
+                    let decay: u32 = instrument.decay.into();
+                    let sustain: u32 = instrument.sustain.into();
+                    let release: u32 = instrument.release.into();
+                    tone(
+                        note_freq[note.index].into(),
+                        attack << 24 | decay << 16 | sustain | release << 8,
+                        100,
+                        TONE_PULSE1 | duty_cycle,
+                    );
+                }
+
+                if let Some(note) = row.pulse2.and_then(|pulse2_pattern_index| {
+                    self.patterns[pulse2_pattern_index][pattern_index]
+                }) {
+                    let instrument = self.instruments[note.instrument];
+                    let duty_cycle = instrument.duty_cycle.to_flag();
+                    let attack: u32 = instrument.attack.into();
+                    let decay: u32 = instrument.decay.into();
+                    let sustain: u32 = instrument.sustain.into();
+                    let release: u32 = instrument.release.into();
+                    tone(
+                        note_freq[note.index].into(),
+                        attack << 24 | decay << 16 | sustain | release << 8,
+                        100,
+                        TONE_PULSE2 | duty_cycle,
+                    );
+                }
+
+                if let Some(note) = row.triangle.and_then(|triangle_pattern_index| {
+                    self.patterns[triangle_pattern_index][pattern_index]
+                }) {
+                    let instrument = self.instruments[note.instrument];
+                    let duty_cycle = instrument.duty_cycle.to_flag();
+                    let attack: u32 = instrument.attack.into();
+                    let decay: u32 = instrument.decay.into();
+                    let sustain: u32 = instrument.sustain.into();
+                    let release: u32 = instrument.release.into();
+                    tone(
+                        note_freq[note.index].into(),
+                        attack << 24 | decay << 16 | sustain | release << 8,
+                        100,
+                        TONE_TRIANGLE | duty_cycle,
+                    );
+                }
+
+                if let Some(note) = row.noise.and_then(|noise_pattern_index| {
+                    self.patterns[noise_pattern_index][pattern_index]
+                }) {
+                    let instrument = self.instruments[note.instrument];
+                    let duty_cycle = instrument.duty_cycle.to_flag();
+                    let attack: u32 = instrument.attack.into();
+                    let decay: u32 = instrument.decay.into();
+                    let sustain: u32 = instrument.sustain.into();
+                    let release: u32 = instrument.release.into();
+                    tone(
+                        note_freq[note.index].into(),
+                        attack << 24 | decay << 16 | sustain | release << 8,
+                        100,
+                        TONE_NOISE | duty_cycle,
+                    );
+                }
+            }
+            PlayMode::Pattern => {
+                let pattern_index: usize = self.tick.into();
+                if let Some(note) = self.patterns[self.selected_pattern][pattern_index] {
+                    let instrument = self.instruments[note.instrument];
+                    let duty_cycle = instrument.duty_cycle.to_flag();
+                    let attack: u32 = instrument.attack.into();
+                    let decay: u32 = instrument.decay.into();
+                    let sustain: u32 = instrument.sustain.into();
+                    let release: u32 = instrument.release.into();
+                    tone(
+                        note_freq[note.index].into(),
+                        attack << 24 | decay << 16 | sustain | release << 8,
+                        100,
+                        TONE_PULSE1 | duty_cycle,
+                    );
+                }
+            }
+            PlayMode::Idle => {}
+        };
     }
 
-    pub fn toggle_play(&mut self) {
-        if !self.playing {
-            self.tick = 0;
-            self.frame = 0;
+    pub fn toggle_play(&mut self, mode: PlayMode) {
+        match self.play {
+            PlayMode::Song | PlayMode::Pattern => self.play = PlayMode::Idle,
+            PlayMode::Idle => {
+                self.song_tick = 0;
+                self.tick = 0;
+                self.frame = 0;
+                self.play = mode
+            }
         }
-        self.playing = !self.playing;
     }
 
     pub fn update(&mut self) {
-        if !self.playing {
+        if let PlayMode::Idle = self.play {
             return;
         }
 
@@ -354,7 +446,18 @@ impl Tracker {
             self.play_tick();
         }
         self.frame = if self.frame == 7 {
-            self.tick = if self.tick == 15 { 0 } else { self.tick + 1 };
+            self.tick = if self.tick == 15 {
+                if let PlayMode::Song = self.play {
+                    self.song_tick = if self.song_tick == 3 {
+                        0
+                    } else {
+                        self.song_tick + 1
+                    }
+                };
+                0
+            } else {
+                self.tick + 1
+            };
             0
         } else {
             self.frame + 1
@@ -504,6 +607,14 @@ impl Tracker {
 
     pub fn set_selected_pattern(&mut self, index: usize) {
         self.selected_pattern = index;
+    }
+
+    pub fn play_mode(&self) -> &PlayMode {
+        &self.play
+    }
+
+    pub fn song_tick(&self) -> usize {
+        self.song_tick
     }
 }
 

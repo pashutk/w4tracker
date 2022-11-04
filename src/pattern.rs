@@ -4,7 +4,7 @@ use crate::{
     inputs::{InputEvent, Inputs},
     navigation::{go_to_instrument_screen, go_to_song_screen},
     timers::TIMERS,
-    tracker::{Column, Note, TRACKER},
+    tracker::{Column, Note, PlayMode, TRACKER},
     INPUTS,
 };
 
@@ -22,7 +22,7 @@ fn on_button_down_press(inputs: &Inputs) {
             )
         } else if inputs.is_button2_pressed() {
             TIMERS.run_action_debounced("play".to_string(), Duration::from_millis(200), || {
-                TRACKER.toggle_play()
+                TRACKER.toggle_play(PlayMode::Pattern)
             })
         } else if inputs.is_button1_pressed() && TRACKER.selected_column() == Column::Instrument {
         } else {
