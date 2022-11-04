@@ -66,13 +66,14 @@ pub fn pattern_screen(tracker: &Tracker) {
     }
 
     set_color(Color::Light);
-    let first_row_y = 98;
+    let first_row_y = 88;
     text_bytes(b"nav:   \x84\x85\x86\x87", 70, first_row_y + 10 * 0);
     text_bytes(b"play:   \x81+\x87", 70, first_row_y + 10 * 1);
     text_bytes(b"add note: \x80", 70, first_row_y + 10 * 2);
     text_bytes(b"rm note: \x80\x80", 70, first_row_y + 10 * 3);
     text_bytes(b"edit:\x80+\x84\x85\x86\x87", 70, first_row_y + 10 * 4);
     text_bytes(b"screen:\x81+\x84\x85", 70, first_row_y + 10 * 5);
+    text_bytes(b"save:   \x81+\x86", 70, first_row_y + 10 * 6);
 
     set_color(Color::Primary);
 

@@ -26,7 +26,7 @@ static mut INPUTS: Inputs = Inputs::new();
 
 #[no_mangle]
 unsafe fn start() {
-    TRACKER = Tracker::new();
+    TRACKER = Tracker::restore();
     TIMERS.init();
     add_pattern_screen_handlers(&mut INPUTS);
     // TRACKER.set_screen(Screen::Song);

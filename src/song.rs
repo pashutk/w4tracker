@@ -5,6 +5,7 @@ use crate::{
     navigation::go_to_pattern_screen,
     timers::TIMERS,
     tracker::{PlayMode, TRACKER},
+    wasm4::trace,
 };
 
 fn on_button_down_press(inputs: &Inputs) {
@@ -28,6 +29,10 @@ fn on_button_up_press(inputs: &Inputs) {
     unsafe {
         if inputs.is_button1_pressed() {
         } else if inputs.is_button2_pressed() {
+            TIMERS.run_action_debounced("persist".to_string(), Duration::from_millis(1000), || {
+                TRACKER.persist();
+                trace("PERSISTED");
+            })
         } else {
             TIMERS.run_action_debounced(
                 "prev_row_cursor".to_string(),

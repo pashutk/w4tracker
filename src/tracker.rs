@@ -1,4 +1,4 @@
-use std::borrow::BorrowMut;
+use std::{borrow::BorrowMut, io::Read, ptr::addr_of};
 
 use crate::{
     channel::Channel,
@@ -6,8 +6,8 @@ use crate::{
     notes::{note_c3_index, note_freq, note_from_string, NOTES_PER_OCTAVE},
     screen::Screen,
     wasm4::{
-        tone, trace, TONE_MODE1, TONE_MODE2, TONE_MODE3, TONE_MODE4, TONE_NOISE, TONE_PULSE1,
-        TONE_PULSE2, TONE_TRIANGLE,
+        diskr, diskw, tone, TONE_MODE1, TONE_MODE2, TONE_MODE3, TONE_MODE4, TONE_NOISE,
+        TONE_PULSE1, TONE_PULSE2, TONE_TRIANGLE,
     },
 };
 
@@ -55,7 +55,7 @@ impl Note {
     }
 
     pub fn next_instrument(&mut self) {
-        if self.instrument < 0x1F {
+        if self.instrument < MAX_INSTRUMENTS {
             self.instrument += 1;
         }
     }
@@ -72,6 +72,10 @@ impl Note {
 
     pub fn note_index(&self) -> usize {
         self.index
+    }
+
+    pub fn to_bytes(&self) -> (u8, u8) {
+        (self.index as u8, self.instrument as u8)
     }
 }
 
@@ -177,6 +181,42 @@ impl Instrument {
     {
         self.release = f(self.release)
     }
+
+    pub fn to_bytes(&self, api_version: u8) -> Vec<u8> {
+        match api_version {
+            1 => {
+                let mut v = vec![0_u8; 5];
+                v[0] = match self.duty_cycle {
+                    DutyCycle::Eighth => 0,
+                    DutyCycle::Fourth => 1,
+                    DutyCycle::Half => 2,
+                    DutyCycle::ThreeFourth => 3,
+                };
+                v[1] = self.attack;
+                v[2] = self.decay;
+                v[3] = self.release;
+                v[4] = self.sustain;
+                v
+            }
+            _ => panic!("Unsupported api version"),
+        }
+    }
+
+    pub fn from_bytes(bytes: (u8, u8, u8, u8, u8)) -> Self {
+        Instrument {
+            duty_cycle: match bytes.0 {
+                0 => DutyCycle::Eighth,
+                1 => DutyCycle::Fourth,
+                2 => DutyCycle::Half,
+                3 => DutyCycle::ThreeFourth,
+                _ => DutyCycle::Eighth,
+            },
+            attack: bytes.1,
+            decay: bytes.2,
+            sustain: bytes.3,
+            release: bytes.4,
+        }
+    }
 }
 
 #[derive(PartialEq, Clone, Copy, Default)]
@@ -194,7 +234,7 @@ pub struct Row {
     noise: Option<usize>,
 }
 
-const MAX_PATTERNS: usize = 0x1F;
+const MAX_PATTERNS: usize = 0x10;
 
 impl Row {
     pub fn channel(&self, channel: &Channel) -> &Option<usize> {
@@ -257,6 +297,20 @@ impl Row {
             Channel::Noise => self.noise = self.noise.map(|a| if a > 0 { a - 1 } else { 0 }),
         }
     }
+
+    pub fn to_bytes(&self, api_version: u8) -> Vec<u8> {
+        match api_version {
+            1 => {
+                let mut v = vec![0_u8; 4];
+                v[0] = self.pulse1.unwrap_or(255).try_into().unwrap();
+                v[1] = self.pulse2.unwrap_or(255).try_into().unwrap();
+                v[2] = self.triangle.unwrap_or(255).try_into().unwrap();
+                v[3] = self.noise.unwrap_or(255).try_into().unwrap();
+                v
+            }
+            _ => panic!("Unsupported api version"),
+        }
+    }
 }
 
 pub enum PlayMode {
@@ -265,23 +319,27 @@ pub enum PlayMode {
     Idle,
 }
 
+const MAX_INSTRUMENTS: usize = 0x20;
+
 pub struct Tracker {
     frame: u32,
     tick: u8,
-    patterns: Vec<[Option<Note>; 16]>,
+    patterns: Vec<[Option<Note>; 16]>, // save - 2b note * 16 * MAX_PATTERNS = 2 * 16 * 16 = 512b
     cursor_tick: u8,
     play: PlayMode,
     selected_column: Column,
-    instruments: [Instrument; 0x1F],
+    instruments: [Instrument; MAX_INSTRUMENTS], // save - 5 * 32 = 160b
     screen: Screen,
     selected_instrument_index: usize,
     instrument_focus: InstrumentInput,
     selected_channel: Channel,
     song_cursor_row_index: usize,
-    song: [Row; 4], // also bpm
+    song: [Row; 4], // save 16b
     selected_pattern: usize,
     song_tick: usize,
 }
+
+const STORAGE_LAYOUT_VERSION: u8 = 1;
 
 impl Tracker {
     const fn empty() -> Self {
@@ -298,7 +356,7 @@ impl Tracker {
                 decay: 0,
                 sustain: 0x0f,
                 release: 0x0f,
-            }; 0x1f],
+            }; MAX_INSTRUMENTS],
             screen: Screen::Pattern,
             selected_instrument_index: 0,
             instrument_focus: InstrumentInput::DutyCycle,
@@ -501,8 +559,8 @@ impl Tracker {
     }
 
     pub fn set_selected_instrument_index(&mut self, index: usize) {
-        if index > 0x1F {
-            panic!("Trying to set instrument index > 0x1f")
+        if index > MAX_INSTRUMENTS {
+            panic!("Trying to set instrument index > MAX_INSTRUMENTS")
         }
 
         self.selected_instrument_index = index;
@@ -615,6 +673,144 @@ impl Tracker {
 
     pub fn song_tick(&self) -> usize {
         self.song_tick
+    }
+
+    pub fn persist(&self) {
+        let layout_version_section_size: usize = 1;
+        let song_section_size = self.song.len() * 4;
+        let instrumens_section_size = self.instruments.len() * 5;
+        let patterns_section_size = self.patterns.len() * 16 * 2;
+        let stored_size = layout_version_section_size
+            + song_section_size
+            + instrumens_section_size
+            + patterns_section_size;
+
+        let mut buf = vec![0_u8; stored_size];
+        let mut next_byte: usize = 0;
+
+        // storage version (1)
+        buf[0] = STORAGE_LAYOUT_VERSION;
+        next_byte += 1;
+
+        // song (4*4)
+        for row in self.song {
+            let row_bytes = row.to_bytes(STORAGE_LAYOUT_VERSION);
+            for byte in row_bytes {
+                buf[next_byte] = byte;
+                next_byte += 1;
+            }
+        }
+
+        // instruments (MAX_INSTRUMENTS * 5)
+        for instrument in self.instruments {
+            let instrument_bytes = instrument.to_bytes(STORAGE_LAYOUT_VERSION);
+            for byte in instrument_bytes {
+                buf[next_byte] = byte;
+                next_byte += 1;
+            }
+        }
+
+        // patterns (MAX_PATTERNS * 16 * 2 (note size))
+        for pattern in &self.patterns {
+            for note in pattern {
+                let bytes = match note {
+                    Some(note) => note.to_bytes(),
+                    None => (0xff, 0xff),
+                };
+                buf[next_byte] = bytes.0;
+                buf[next_byte + 1] = bytes.1;
+                next_byte += 2;
+            }
+        }
+
+        unsafe {
+            diskw(addr_of!(buf.as_slice()[0]), stored_size as u32);
+        }
+    }
+
+    pub fn restore() -> Tracker {
+        let mut tracker = Tracker::new();
+
+        const SONG_SIZE: usize = 4;
+        let mut buf = [0u8; 1 + SONG_SIZE * 4 + MAX_INSTRUMENTS * 5 + MAX_PATTERNS * 16 * 2];
+
+        unsafe {
+            diskr(buf.as_mut_ptr(), buf.len() as u32);
+        }
+
+        let mut next_byte: usize = 0;
+
+        // storage version (1)
+        let version = buf[next_byte];
+        if version != STORAGE_LAYOUT_VERSION {
+            return tracker;
+        }
+        next_byte += 1;
+
+        // song (4*4)
+        for row_index in 0..SONG_SIZE {
+            let pulse1: Option<usize> = if let 255 = buf[next_byte + 0] {
+                None
+            } else {
+                Some(buf[next_byte + 0].into())
+            };
+            let pulse2: Option<usize> = if let 255 = buf[next_byte + 1] {
+                None
+            } else {
+                Some(buf[next_byte + 1].into())
+            };
+            let triangle: Option<usize> = if let 255 = buf[next_byte + 2] {
+                None
+            } else {
+                Some(buf[next_byte + 2].into())
+            };
+            let noise: Option<usize> = if let 255 = buf[next_byte + 3] {
+                None
+            } else {
+                Some(buf[next_byte + 3].into())
+            };
+            next_byte += 4;
+
+            let row = Row {
+                pulse1,
+                pulse2,
+                triangle,
+                noise,
+            };
+            tracker.song[row_index] = row;
+        }
+
+        // instruments (MAX_INSTRUMENTS * 5)
+        for instrument_index in 0..MAX_INSTRUMENTS {
+            let bytes = (
+                buf[next_byte + 0],
+                buf[next_byte + 1],
+                buf[next_byte + 2],
+                buf[next_byte + 3],
+                buf[next_byte + 4],
+            );
+            next_byte += 5;
+            let instrument = Instrument::from_bytes(bytes);
+            tracker.instruments[instrument_index] = instrument;
+        }
+
+        // patterns (MAX_PATTERNS * 16 * 2 (note size))
+        for pattern_index in 0..MAX_PATTERNS {
+            for note_index in 0..16 {
+                let bytes = (buf[next_byte + 0], buf[next_byte + 1]);
+                next_byte += 2;
+                let note = match bytes {
+                    (0xff, 0xff) => None,
+                    (index, instrument) => Some(Note {
+                        index: index.into(),
+                        instrument: instrument.into(),
+                    }),
+                };
+                tracker.patterns[pattern_index][note_index] = note;
+            }
+        }
+
+        tracker
     }
 }
 
