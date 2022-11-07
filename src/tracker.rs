@@ -55,7 +55,7 @@ impl Note {
     }
 
     pub fn next_instrument(&mut self) {
-        if self.instrument < MAX_INSTRUMENTS {
+        if self.instrument < MAX_INSTRUMENTS - 1 {
             self.instrument += 1;
         }
     }
@@ -269,20 +269,22 @@ impl Row {
             Channel::Pulse1 => {
                 self.pulse1 = self
                     .pulse1
-                    .map(|a| if a < MAX_PATTERNS { a + 1 } else { a })
+                    .map(|a| if a < MAX_PATTERNS - 1 { a + 1 } else { a })
             }
             Channel::Pulse2 => {
                 self.pulse2 = self
                     .pulse2
-                    .map(|a| if a < MAX_PATTERNS { a + 1 } else { a })
+                    .map(|a| if a < MAX_PATTERNS - 1 { a + 1 } else { a })
             }
             Channel::Triangle => {
                 self.triangle = self
                     .triangle
-                    .map(|a| if a < MAX_PATTERNS { a + 1 } else { a })
+                    .map(|a| if a < MAX_PATTERNS - 1 { a + 1 } else { a })
             }
             Channel::Noise => {
-                self.noise = self.noise.map(|a| if a < MAX_PATTERNS { a + 1 } else { a })
+                self.noise = self
+                    .noise
+                    .map(|a| if a < MAX_PATTERNS - 1 { a + 1 } else { a })
             }
         }
     }
