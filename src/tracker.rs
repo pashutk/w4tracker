@@ -473,11 +473,17 @@ impl Tracker {
                     let decay: u32 = instrument.decay.into();
                     let sustain: u32 = instrument.sustain.into();
                     let release: u32 = instrument.release.into();
+                    let channel = self.selected_channel;
                     tone(
                         note_freq[note.index].into(),
                         attack << 24 | decay << 16 | sustain | release << 8,
                         100,
-                        TONE_PULSE1 | duty_cycle,
+                        match channel {
+                            Channel::Pulse1 => TONE_PULSE1,
+                            Channel::Pulse2 => TONE_PULSE2,
+                            Channel::Triangle => TONE_TRIANGLE,
+                            Channel::Noise => TONE_NOISE,
+                        } | duty_cycle,
                     );
                 }
             }
