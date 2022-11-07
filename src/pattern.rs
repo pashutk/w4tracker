@@ -49,6 +49,10 @@ fn on_button_up_press(inputs: &Inputs) {
                 },
             )
         } else if inputs.is_button1_pressed() && TRACKER.selected_column() == Column::Instrument {
+        } else if inputs.is_button2_pressed() {
+            TIMERS.run_action_debounced("persist".to_string(), Duration::from_millis(1000), || {
+                TRACKER.persist();
+            })
         } else {
             TIMERS.run_action_debounced("nav_up".to_string(), Duration::from_millis(100), || {
                 TRACKER.saturating_decrease_cursor_tick();

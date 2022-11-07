@@ -31,7 +31,6 @@ fn on_button_up_press(inputs: &Inputs) {
         } else if inputs.is_button2_pressed() {
             TIMERS.run_action_debounced("persist".to_string(), Duration::from_millis(1000), || {
                 TRACKER.persist();
-                trace("PERSISTED");
             })
         } else {
             TIMERS.run_action_debounced(
