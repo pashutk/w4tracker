@@ -42,8 +42,8 @@ fn update() {
 
     match tracker.screen() {
         Screen::Pattern => render::pattern_screen(tracker, 0, 0),
-        Screen::Instrument => render::instrument_screen(tracker),
-        Screen::Song => render::song_screen(tracker),
+        Screen::Instrument => render::instrument_screen(tracker, 0, 0),
+        Screen::Song => render::song_screen(tracker, 0, 0),
         _ => render::not_implemented_screen(),
     }
 

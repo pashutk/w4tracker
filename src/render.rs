@@ -130,14 +130,17 @@ fn draw_sqr_waveform(signal_active: u32, signal_width: u32, amplitude: u32, x: i
     );
 }
 
-pub fn instrument_screen(tracker: &Tracker) {
+pub fn instrument_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {
+    let relative_x = |a: i32| a + origin_x;
+    let relative_y = |a: i32| a + origin_y;
+
     set_color(Color::Primary);
 
     let selected_instrument_index = tracker.selected_instrument_index();
     text(
         format!("Instrument {:02X}", selected_instrument_index),
-        10,
-        10,
+        relative_x(10),
+        relative_y(10),
     );
 
     let instrument = tracker.selected_instrument();
@@ -150,7 +153,12 @@ pub fn instrument_screen(tracker: &Tracker) {
     let text_size_x = value_column_x - 10;
     text("Duty cycle", duty_cycle_x, duty_cycle_y);
     if focus == InstrumentInput::DutyCycle {
-        rect(duty_cycle_x + text_size_x - 1, duty_cycle_y - 1, 18, 10);
+        rect(
+            relative_x(duty_cycle_x + text_size_x - 1),
+            relative_y(duty_cycle_y - 1),
+            18,
+            10,
+        );
         set_color(Color::Background);
     }
     let signal_width = 16;
@@ -165,8 +173,8 @@ pub fn instrument_screen(tracker: &Tracker) {
         signal_active,
         signal_width,
         8,
-        duty_cycle_x + text_size_x,
-        duty_cycle_y - 1,
+        relative_x(duty_cycle_x + text_size_x),
+        relative_y(duty_cycle_y - 1),
     );
     if focus == InstrumentInput::DutyCycle {
         set_color(Color::Primary);
@@ -174,14 +182,14 @@ pub fn instrument_screen(tracker: &Tracker) {
 
     let input = |x: i32, y: i32, label: &str, value: u8, id: InstrumentInput| {
         set_color(Color::Primary);
-        text(label, x, y);
+        text(label, relative_x(x), relative_y(y));
         let value_x: i32 = value_column_x;
         if focus == id {
             let rect_width: u32 = 8 * 2 + 1;
-            rect(value_x - 1, y - 1, rect_width, 9);
+            rect(relative_x(value_x - 1), relative_y(y - 1), rect_width, 9);
             set_color(Color::Background);
         }
-        text(format!("{:02X}", value), value_x, y);
+        text(format!("{:02X}", value), relative_x(value_x), relative_y(y));
         if focus == id {
             set_color(Color::Primary);
         }
@@ -214,7 +222,10 @@ pub fn instrument_screen(tracker: &Tracker) {
     );
 }
 
-pub fn song_screen(tracker: &Tracker) {
+pub fn song_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {
+    let relative_x = |a: i32| a + origin_x;
+    let relative_y = |a: i32| a + origin_y;
+
     set_color(Color::Primary);
 
     impl Channel {
@@ -230,10 +241,10 @@ pub fn song_screen(tracker: &Tracker) {
         }
     }
 
-    text("P1", Channel::Pulse1.to_x(), 10);
-    text("P2", Channel::Pulse2.to_x(), 10);
-    text("TR", Channel::Triangle.to_x(), 10);
-    text("NS", Channel::Noise.to_x(), 10);
+    text("P1", relative_x(Channel::Pulse1.to_x()), relative_y(10));
+    text("P2", relative_x(Channel::Pulse2.to_x()), relative_y(10));
+    text("TR", relative_x(Channel::Triangle.to_x()), relative_y(10));
+    text("NS", relative_x(Channel::Noise.to_x()), relative_y(10));
 
     let selected_channel = tracker.selected_channel();
     let row = tracker.song_cursor_row();
@@ -248,17 +259,17 @@ pub fn song_screen(tracker: &Tracker) {
             };
             if *selected_channel == channel && line == row {
                 set_color(Color::Primary);
-                rect(x - 1, y - 1, 18, 9);
+                rect(relative_x(x - 1), relative_y(y - 1), 18, 9);
                 set_color(Color::Background);
-                text(val, x, y);
+                text(val, relative_x(x), relative_y(y));
                 set_color(Color::Primary);
             } else {
-                text(val, x, y);
+                text(val, relative_x(x), relative_y(y));
             }
 
             if let PlayMode::Song = tracker.play_mode() {
                 if tracker.song_tick() == line {
-                    text(">", x - 10, y);
+                    text(">", relative_x(x - 10), relative_y(y));
                 }
             }
         }
