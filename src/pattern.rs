@@ -3,16 +3,15 @@ use std::time::Duration;
 use crate::{
     inputs::{InputEvent, Inputs},
     navigation::{go_to_instrument_screen, go_to_song_screen},
-    timers::TIMERS,
+    timers::{ActionId, TIMERS},
     tracker::{Column, Note, PlayMode, TRACKER},
-    INPUTS,
 };
 
 fn on_button_down_press(inputs: &Inputs) {
     unsafe {
         if inputs.is_button1_pressed() && TRACKER.selected_column() == Column::Note {
             TIMERS.run_action_debounced(
-                "pitch_octave_down".to_string(),
+                ActionId::PatternPitchOctaveDown,
                 Duration::from_millis(100),
                 || {
                     if let Some(note) = TRACKER.current_note_mut() {
@@ -21,17 +20,21 @@ fn on_button_down_press(inputs: &Inputs) {
                 },
             )
         } else if inputs.is_button2_pressed() {
-            TIMERS.run_action_debounced("play".to_string(), Duration::from_millis(200), || {
+            TIMERS.run_action_debounced(ActionId::Play, Duration::from_millis(200), || {
                 TRACKER.toggle_play(PlayMode::Pattern)
             })
         } else if inputs.is_button1_pressed() && TRACKER.selected_column() == Column::Instrument {
         } else {
-            TIMERS.run_action_debounced("nav_down".to_string(), Duration::from_millis(100), || {
-                TRACKER.saturating_increase_cursor_tick();
-                if let Some(note) = TRACKER.current_note() {
-                    TRACKER.set_selected_instrument_index(note.instrument_index());
-                }
-            })
+            TIMERS.run_action_debounced(
+                ActionId::PatternNavDown,
+                Duration::from_millis(100),
+                || {
+                    TRACKER.saturating_increase_cursor_tick();
+                    if let Some(note) = TRACKER.current_note() {
+                        TRACKER.set_selected_instrument_index(note.instrument_index());
+                    }
+                },
+            )
         }
     }
 }
@@ -40,7 +43,7 @@ fn on_button_up_press(inputs: &Inputs) {
     unsafe {
         if inputs.is_button1_pressed() && TRACKER.selected_column() == Column::Note {
             TIMERS.run_action_debounced(
-                "pitch_octave_up".to_string(),
+                ActionId::PatternPitchOctaveUp,
                 Duration::from_millis(100),
                 || {
                     if let Some(note) = TRACKER.current_note_mut() {
@@ -50,11 +53,11 @@ fn on_button_up_press(inputs: &Inputs) {
             )
         } else if inputs.is_button1_pressed() && TRACKER.selected_column() == Column::Instrument {
         } else if inputs.is_button2_pressed() {
-            TIMERS.run_action_debounced("persist".to_string(), Duration::from_millis(1000), || {
+            TIMERS.run_action_debounced(ActionId::Persist, Duration::from_millis(1000), || {
                 TRACKER.persist();
             })
         } else {
-            TIMERS.run_action_debounced("nav_up".to_string(), Duration::from_millis(100), || {
+            TIMERS.run_action_debounced(ActionId::PatternNavUp, Duration::from_millis(100), || {
                 TRACKER.saturating_decrease_cursor_tick();
                 if let Some(note) = TRACKER.current_note() {
                     TRACKER.set_selected_instrument_index(note.instrument_index());
@@ -86,7 +89,7 @@ fn on_button_right_press(inputs: &Inputs) {
         if inputs.is_button1_pressed() {
             match TRACKER.selected_column() {
                 Column::Note => TIMERS.run_action_debounced(
-                    "pitch_up".to_string(),
+                    ActionId::PatternPitchUp,
                     Duration::from_millis(100),
                     || {
                         if let Some(note) = TRACKER.current_note_mut() {
@@ -95,7 +98,7 @@ fn on_button_right_press(inputs: &Inputs) {
                     },
                 ),
                 Column::Instrument => TIMERS.run_action_debounced(
-                    "instrument_next".to_string(),
+                    ActionId::PatternInstrumentNext,
                     Duration::from_millis(200),
                     || {
                         if let Some(note) = TRACKER.current_note_mut() {
@@ -106,7 +109,7 @@ fn on_button_right_press(inputs: &Inputs) {
             };
         } else if inputs.is_button2_pressed() {
             TIMERS.run_action_debounced(
-                "nav_next_screen".to_string(),
+                ActionId::NavNextScreen,
                 Duration::from_millis(200),
                 || {
                     if let Some(note) = TRACKER.current_note() {
@@ -126,7 +129,7 @@ fn on_button_left_press(inputs: &Inputs) {
         if inputs.is_button1_pressed() {
             match TRACKER.selected_column() {
                 Column::Note => TIMERS.run_action_debounced(
-                    "pitch_down".to_string(),
+                    ActionId::PatternPitchDown,
                     Duration::from_millis(100),
                     || {
                         if let Some(note) = TRACKER.current_note_mut() {
@@ -135,7 +138,7 @@ fn on_button_left_press(inputs: &Inputs) {
                     },
                 ),
                 Column::Instrument => TIMERS.run_action_debounced(
-                    "instrument_prev".to_string(),
+                    ActionId::PatternInstrumentPrev,
                     Duration::from_millis(200),
                     || {
                         if let Some(note) = TRACKER.current_note_mut() {
@@ -146,7 +149,7 @@ fn on_button_left_press(inputs: &Inputs) {
             }
         } else if inputs.is_button2_pressed() {
             TIMERS.run_action_debounced(
-                "nav_prev_screen".to_string(),
+                ActionId::NavPrevScreen,
                 Duration::from_millis(200),
                 || {
                     go_to_song_screen();

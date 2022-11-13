@@ -3,9 +3,8 @@ use std::time::Duration;
 use crate::{
     inputs::{InputEvent, Inputs},
     navigation::go_to_pattern_screen,
-    timers::TIMERS,
+    timers::{ActionId, TIMERS},
     tracker::{PlayMode, TRACKER},
-    INPUTS,
 };
 
 #[derive(Clone, Copy, PartialEq)]
@@ -20,12 +19,12 @@ pub enum InstrumentInput {
 fn on_button_down_press(inputs: &Inputs) {
     unsafe {
         if inputs.is_button2_pressed() {
-            TIMERS.run_action_debounced("play".to_string(), Duration::from_millis(200), || {
+            TIMERS.run_action_debounced(ActionId::Play, Duration::from_millis(200), || {
                 TRACKER.toggle_play(PlayMode::Pattern)
             })
         } else if inputs.is_button1_pressed() {
             TIMERS.run_action_debounced(
-                "instrument_value_down".to_string(),
+                ActionId::InstrumentValueDownActionId,
                 Duration::from_millis(200),
                 || {
                     let selected_instrument = TRACKER.selected_instrument_mut();
@@ -49,7 +48,7 @@ fn on_button_down_press(inputs: &Inputs) {
             )
         } else {
             TIMERS.run_action_debounced(
-                "instrument_input_next".to_string(),
+                ActionId::InstrumentNextInputActionId,
                 Duration::from_millis(200),
                 || TRACKER.instrument_focus_next(),
             )
@@ -61,7 +60,7 @@ fn on_button_up_press(inputs: &Inputs) {
     unsafe {
         if inputs.is_button1_pressed() {
             TIMERS.run_action_debounced(
-                "instrument_value_up".to_string(),
+                ActionId::InstrumentValueUpActionId,
                 Duration::from_millis(200),
                 || {
                     let selected_instrument = TRACKER.selected_instrument_mut();
@@ -84,12 +83,12 @@ fn on_button_up_press(inputs: &Inputs) {
                 },
             )
         } else if inputs.is_button2_pressed() {
-            TIMERS.run_action_debounced("persist".to_string(), Duration::from_millis(1000), || {
+            TIMERS.run_action_debounced(ActionId::Persist, Duration::from_millis(1000), || {
                 TRACKER.persist();
             })
         } else {
             TIMERS.run_action_debounced(
-                "instrument_input_prev".to_string(),
+                ActionId::InstrumentPrevInputActionId,
                 Duration::from_millis(200),
                 || TRACKER.instrument_focus_prev(),
             )
@@ -101,13 +100,13 @@ fn on_button_left_press(inputs: &Inputs) {
     unsafe {
         if inputs.is_button2_pressed() {
             TIMERS.run_action_debounced(
-                "nav_prev_screen".to_string(),
+                ActionId::NavPrevScreen,
                 Duration::from_millis(200),
                 || go_to_pattern_screen(),
             );
         } else if inputs.is_button1_pressed() {
             TIMERS.run_action_debounced(
-                "instrument_value_prev".to_string(),
+                ActionId::InstrumentValuePrevActionId,
                 Duration::from_millis(200),
                 || {
                     let selected_instrument = TRACKER.selected_instrument_mut();
@@ -139,7 +138,7 @@ fn on_button_right_press(inputs: &Inputs) {
     unsafe {
         if inputs.is_button1_pressed() {
             TIMERS.run_action_debounced(
-                "instrument_value_next".to_string(),
+                ActionId::InstrumentValueNextActionId,
                 Duration::from_millis(200),
                 || {
                     let selected_instrument = TRACKER.selected_instrument_mut();

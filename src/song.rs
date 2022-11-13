@@ -3,24 +3,21 @@ use std::time::Duration;
 use crate::{
     inputs::{InputEvent, Inputs},
     navigation::go_to_pattern_screen,
-    timers::TIMERS,
+    timers::{ActionId, TIMERS},
     tracker::{PlayMode, TRACKER},
-    wasm4::trace,
 };
 
 fn on_button_down_press(inputs: &Inputs) {
     unsafe {
         if inputs.is_button2_pressed() {
-            TIMERS.run_action_debounced("play".to_string(), Duration::from_millis(200), || {
+            TIMERS.run_action_debounced(ActionId::Play, Duration::from_millis(200), || {
                 TRACKER.toggle_play(PlayMode::Song)
             })
         } else if inputs.is_button1_pressed() {
         } else {
-            TIMERS.run_action_debounced(
-                "next_row_cursor".to_string(),
-                Duration::from_millis(200),
-                || TRACKER.next_row_song_cursor(),
-            )
+            TIMERS.run_action_debounced(ActionId::SongNextRow, Duration::from_millis(200), || {
+                TRACKER.next_row_song_cursor()
+            })
         }
     }
 }
@@ -29,15 +26,13 @@ fn on_button_up_press(inputs: &Inputs) {
     unsafe {
         if inputs.is_button1_pressed() {
         } else if inputs.is_button2_pressed() {
-            TIMERS.run_action_debounced("persist".to_string(), Duration::from_millis(1000), || {
+            TIMERS.run_action_debounced(ActionId::Persist, Duration::from_millis(1000), || {
                 TRACKER.persist();
             })
         } else {
-            TIMERS.run_action_debounced(
-                "prev_row_cursor".to_string(),
-                Duration::from_millis(200),
-                || TRACKER.prev_row_song_cursor(),
-            )
+            TIMERS.run_action_debounced(ActionId::SongPrevRow, Duration::from_millis(200), || {
+                TRACKER.prev_row_song_cursor()
+            })
         }
     }
 }
@@ -47,7 +42,7 @@ fn on_button_left_press(inputs: &Inputs) {
         if inputs.is_button2_pressed() {
         } else if inputs.is_button1_pressed() {
             TIMERS.run_action_debounced(
-                "decrement_pattern".to_string(),
+                ActionId::SongDecrementPattern,
                 Duration::from_millis(200),
                 || {
                     let selected_row = TRACKER.song_cursor_row();
@@ -61,7 +56,7 @@ fn on_button_left_press(inputs: &Inputs) {
             )
         } else {
             TIMERS.run_action_debounced(
-                "prev_channel".to_string(),
+                ActionId::SongPrevChannel,
                 Duration::from_millis(200),
                 || TRACKER.prev_channel(),
             )
@@ -73,7 +68,7 @@ fn on_button_right_press(inputs: &Inputs) {
     unsafe {
         if inputs.is_button2_pressed() {
             TIMERS.run_action_debounced(
-                "nav_next_screen".to_string(),
+                ActionId::NavNextScreen,
                 Duration::from_millis(200),
                 || {
                     let selected_row = TRACKER.song_cursor_row();
@@ -90,7 +85,7 @@ fn on_button_right_press(inputs: &Inputs) {
             );
         } else if inputs.is_button1_pressed() {
             TIMERS.run_action_debounced(
-                "increment_pattern".to_string(),
+                ActionId::SongIncrementPattern,
                 Duration::from_millis(200),
                 || {
                     let selected_row = TRACKER.song_cursor_row();
@@ -104,7 +99,7 @@ fn on_button_right_press(inputs: &Inputs) {
             )
         } else {
             TIMERS.run_action_debounced(
-                "next_channel".to_string(),
+                ActionId::SongNextChannel,
                 Duration::from_millis(200),
                 || TRACKER.next_channel(),
             )
@@ -114,21 +109,17 @@ fn on_button_right_press(inputs: &Inputs) {
 
 fn on_button_1_press(inputs: &Inputs) {
     unsafe {
-        TIMERS.run_action_debounced(
-            "add_pattern".to_string(),
-            Duration::from_millis(200),
-            || {
-                let selected_channel = TRACKER.selected_channel();
-                let selected_row = TRACKER.song_cursor_row();
-                let song = TRACKER.song_mut();
-                let row = song.get_mut(selected_row);
-                if let Some(row) = row {
-                    if let None = row.channel(selected_channel) {
-                        row.set_channel_value(selected_channel, Some(0));
-                    }
+        TIMERS.run_action_debounced(ActionId::SongAddPattern, Duration::from_millis(200), || {
+            let selected_channel = TRACKER.selected_channel();
+            let selected_row = TRACKER.song_cursor_row();
+            let song = TRACKER.song_mut();
+            let row = song.get_mut(selected_row);
+            if let Some(row) = row {
+                if let None = row.channel(selected_channel) {
+                    row.set_channel_value(selected_channel, Some(0));
                 }
-            },
-        );
+            }
+        });
     }
 }
 
