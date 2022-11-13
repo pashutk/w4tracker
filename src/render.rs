@@ -24,15 +24,26 @@ fn set_color(color: Color) {
     }
 }
 
-pub fn pattern_screen(tracker: &Tracker) {
+pub fn pattern_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {
+    let relative_x = |a: i32| a + origin_x;
+    let relative_y = |a: i32| a + origin_y;
+
     let cursor = tracker.cursor_tick();
     let selected_column = tracker.selected_column();
 
     let pattern = tracker.selected_pattern();
-    text(format!("Pattern {:02X}", pattern), 80, 1);
+    text(
+        format!("Pattern {:02X}", pattern),
+        relative_x(80),
+        relative_y(1),
+    );
 
     for line in 0..16 {
-        text(format!("{:0X}", line), 1, line * 10 + 1);
+        text(
+            format!("{:0X}", line),
+            relative_x(1),
+            relative_y(line * 10 + 1),
+        );
 
         let note = tracker.note_at(line as usize);
         let name = if let Some(note) = note {
@@ -42,12 +53,12 @@ pub fn pattern_screen(tracker: &Tracker) {
         };
 
         if line == cursor.into() && selected_column == Column::Note {
-            rect(20, line * 10, 8 * 3 + 1, 10);
+            rect(relative_x(20), relative_y(line * 10), 8 * 3 + 1, 10);
             set_color(Color::Background);
-            text(name, 21, line * 10 + 1);
+            text(name, relative_x(21), relative_y(line * 10 + 1));
             set_color(Color::Primary);
         } else {
-            text(name, 21, line * 10 + 1);
+            text(name, relative_x(21), relative_y(line * 10 + 1));
         };
 
         let instrument_name = if let Some(note) = note {
@@ -56,29 +67,57 @@ pub fn pattern_screen(tracker: &Tracker) {
             "--".to_string()
         };
         if line == cursor.into() && selected_column == Column::Instrument {
-            rect(50, line * 10, 8 * 2 + 1, 10);
+            rect(relative_x(50), relative_y(line * 10), 8 * 2 + 1, 10);
             set_color(Color::Background);
-            text(instrument_name, 51, line * 10 + 1);
+            text(instrument_name, relative_x(51), relative_y(line * 10 + 1));
             set_color(Color::Primary);
         } else {
-            text(instrument_name, 51, line * 10 + 1);
+            text(instrument_name, relative_x(51), relative_y(line * 10 + 1));
         };
     }
 
     set_color(Color::Light);
     let first_row_y = 88;
-    text_bytes(b"nav:   \x84\x85\x86\x87", 70, first_row_y + 10 * 0);
-    text_bytes(b"play:   \x81+\x87", 70, first_row_y + 10 * 1);
-    text_bytes(b"add note: \x80", 70, first_row_y + 10 * 2);
-    text_bytes(b"rm note: \x80\x80", 70, first_row_y + 10 * 3);
-    text_bytes(b"edit:\x80+\x84\x85\x86\x87", 70, first_row_y + 10 * 4);
-    text_bytes(b"screen:\x81+\x84\x85", 70, first_row_y + 10 * 5);
-    text_bytes(b"save:   \x81+\x86", 70, first_row_y + 10 * 6);
+    text_bytes(
+        b"nav:   \x84\x85\x86\x87",
+        relative_x(70),
+        relative_y(first_row_y + 10 * 0),
+    );
+    text_bytes(
+        b"play:   \x81+\x87",
+        relative_x(70),
+        relative_y(first_row_y + 10 * 1),
+    );
+    text_bytes(
+        b"add note: \x80",
+        relative_x(70),
+        relative_y(first_row_y + 10 * 2),
+    );
+    text_bytes(
+        b"rm note: \x80\x80",
+        relative_x(70),
+        relative_y(first_row_y + 10 * 3),
+    );
+    text_bytes(
+        b"edit:\x80+\x84\x85\x86\x87",
+        relative_x(70),
+        relative_y(first_row_y + 10 * 4),
+    );
+    text_bytes(
+        b"screen:\x81+\x84\x85",
+        relative_x(70),
+        relative_y(first_row_y + 10 * 5),
+    );
+    text_bytes(
+        b"save:   \x81+\x86",
+        relative_x(70),
+        relative_y(first_row_y + 10 * 6),
+    );
 
     set_color(Color::Primary);
 
     let tick: i32 = tracker.tick().into();
-    text(">", 11, tick * 10 + 1);
+    text(">", relative_x(11), relative_y(tick * 10 + 1));
 }
 
 fn draw_sqr_waveform(signal_active: u32, signal_width: u32, amplitude: u32, x: i32, y: i32) {
