@@ -1,4 +1,4 @@
-use std::{ptr::addr_of};
+use std::{ptr::addr_of, mem::size_of};
 
 use crate::{
     channel::Channel,
@@ -711,7 +711,7 @@ impl Tracker {
     pub fn persist(&self) { 
         let layout_version_section_size: usize = 1;
         let song_section_size = self.song.len() * 4;
-        let instrumens_section_size = self.instruments.len() * 7;
+        let instrumens_section_size = self.instruments.len() * size_of::<Instrument>();
         let patterns_section_size = self.patterns.len() * 16 * 2;
         let stored_size = layout_version_section_size
             + song_section_size
@@ -765,7 +765,7 @@ impl Tracker {
         let mut tracker = Tracker::new();
 
         const SONG_SIZE: usize = 4;
-        let mut buf = [0u8; 1 + SONG_SIZE * 4 + MAX_INSTRUMENTS * 7 + MAX_PATTERNS * 16 * 2];
+        let mut buf = [0u8; 1 + SONG_SIZE * 4 + MAX_INSTRUMENTS * size_of::<Instrument>() + MAX_PATTERNS * 16 * 2];
 
         unsafe {
             diskr(buf.as_mut_ptr(), buf.len() as u32);
