@@ -1,9 +1,9 @@
-use std::{borrow::BorrowMut, io::Read, ptr::addr_of};
+use std::{ptr::addr_of, mem::size_of};
 
 use crate::{
     channel::Channel,
     instrument::InstrumentInput,
-    notes::{note_c3_index, note_freq, note_from_string, NOTES_PER_OCTAVE},
+    notes::{NOTE_C3_INDEX, NOTE_FREQ, NOTES_PER_OCTAVE},
     screen::Screen,
     wasm4::{
         diskr, diskw, tone, TONE_MODE1, TONE_MODE2, TONE_MODE3, TONE_MODE4, TONE_NOISE,
@@ -20,13 +20,13 @@ pub struct Note {
 impl Note {
     pub fn new() -> Self {
         Note {
-            index: note_c3_index,
+            index: NOTE_C3_INDEX,
             instrument: 0,
         }
     }
 
     pub fn increase_pitch(&mut self) {
-        if self.index < note_freq.len() - 1 {
+        if self.index < NOTE_FREQ.len() - 1 {
             self.index += 1;
         }
     }
@@ -38,11 +38,11 @@ impl Note {
     }
 
     pub fn increase_octave(&mut self) {
-        let max_value: usize = note_freq.len() - NOTES_PER_OCTAVE as usize;
+        let max_value: usize = NOTE_FREQ.len() - NOTES_PER_OCTAVE as usize;
         if self.index < max_value {
             self.index = self.index + NOTES_PER_OCTAVE as usize;
         } else {
-            self.index = note_freq.len();
+            self.index = NOTE_FREQ.len();
         }
     }
 
@@ -124,6 +124,8 @@ pub struct Instrument {
     decay: u8,
     sustain: u8,
     release: u8,
+    volume: u8,
+    peak: u8,
 }
 
 impl Instrument {
@@ -145,6 +147,14 @@ impl Instrument {
 
     pub fn release(&self) -> u8 {
         self.release
+    }
+
+    pub fn volume(&self) -> u8 {
+        self.volume
+    }
+
+    pub fn peak(&self) -> u8 {
+        self.peak
     }
 
     pub fn update_duty_cycle<F>(&mut self, f: F)
@@ -182,10 +192,24 @@ impl Instrument {
         self.release = f(self.release)
     }
 
+    pub fn update_volume<F>(&mut self, f: F)
+    where
+        F: FnOnce(u8) -> u8,
+    {
+        self.volume = f(self.volume)
+    }
+
+    pub fn update_peak<F>(&mut self, f: F)
+    where
+        F: FnOnce(u8) -> u8,
+    {
+        self.peak = f(self.peak)
+    }
+
     pub fn to_bytes(&self, api_version: u8) -> Vec<u8> {
         match api_version {
             1 => {
-                let mut v = vec![0_u8; 5];
+                let mut v = vec![0_u8; 7];
                 v[0] = match self.duty_cycle {
                     DutyCycle::Eighth => 0,
                     DutyCycle::Fourth => 1,
@@ -196,13 +220,15 @@ impl Instrument {
                 v[2] = self.decay;
                 v[3] = self.release;
                 v[4] = self.sustain;
+                v[5] = self.volume;
+                v[6] = self.peak;
                 v
             }
             _ => panic!("Unsupported api version"),
         }
     }
 
-    pub fn from_bytes(bytes: (u8, u8, u8, u8, u8)) -> Self {
+    pub fn from_bytes(bytes: (u8, u8, u8, u8, u8, u8, u8)) -> Self {
         Instrument {
             duty_cycle: match bytes.0 {
                 0 => DutyCycle::Eighth,
@@ -215,6 +241,8 @@ impl Instrument {
             decay: bytes.2,
             sustain: bytes.3,
             release: bytes.4,
+            volume: bytes.5,
+            peak: bytes.6
         }
     }
 }
@@ -243,15 +271,6 @@ impl Row {
             Channel::Pulse2 => &self.pulse2,
             Channel::Triangle => &self.triangle,
             Channel::Noise => &self.noise,
-        }
-    }
-
-    pub fn channel_mut(&mut self, channel: &Channel) -> &mut Option<usize> {
-        match channel {
-            Channel::Pulse1 => &mut self.pulse1,
-            Channel::Pulse2 => &mut self.pulse2,
-            Channel::Triangle => &mut self.triangle,
-            Channel::Noise => &mut self.noise,
         }
     }
 
@@ -330,7 +349,7 @@ pub struct Tracker {
     cursor_tick: u8,
     play: PlayMode,
     selected_column: Column,
-    instruments: [Instrument; MAX_INSTRUMENTS], // save - 5 * 32 = 160b
+    instruments: [Instrument; MAX_INSTRUMENTS], // save - 7 * 32 = 224b
     screen: Screen,
     selected_instrument_index: usize,
     instrument_focus: InstrumentInput,
@@ -358,6 +377,8 @@ impl Tracker {
                 decay: 0,
                 sustain: 0x0f,
                 release: 0x0f,
+                volume: 0xff,
+                peak: 0xff
             }; MAX_INSTRUMENTS],
             screen: Screen::Pattern,
             selected_instrument_index: 0,
@@ -406,7 +427,7 @@ impl Tracker {
                     let sustain: u32 = instrument.sustain.into();
                     let release: u32 = instrument.release.into();
                     tone(
-                        note_freq[note.index].into(),
+                        NOTE_FREQ[note.index].into(),
                         attack << 24 | decay << 16 | sustain | release << 8,
                         100,
                         TONE_PULSE1 | duty_cycle,
@@ -423,7 +444,7 @@ impl Tracker {
                     let sustain: u32 = instrument.sustain.into();
                     let release: u32 = instrument.release.into();
                     tone(
-                        note_freq[note.index].into(),
+                        NOTE_FREQ[note.index].into(),
                         attack << 24 | decay << 16 | sustain | release << 8,
                         100,
                         TONE_PULSE2 | duty_cycle,
@@ -440,7 +461,7 @@ impl Tracker {
                     let sustain: u32 = instrument.sustain.into();
                     let release: u32 = instrument.release.into();
                     tone(
-                        note_freq[note.index].into(),
+                        NOTE_FREQ[note.index].into(),
                         attack << 24 | decay << 16 | sustain | release << 8,
                         100,
                         TONE_TRIANGLE | duty_cycle,
@@ -457,7 +478,7 @@ impl Tracker {
                     let sustain: u32 = instrument.sustain.into();
                     let release: u32 = instrument.release.into();
                     tone(
-                        note_freq[note.index].into(),
+                        NOTE_FREQ[note.index].into(),
                         attack << 24 | decay << 16 | sustain | release << 8,
                         100,
                         TONE_NOISE | duty_cycle,
@@ -475,7 +496,7 @@ impl Tracker {
                     let release: u32 = instrument.release.into();
                     let channel = self.selected_channel;
                     tone(
-                        note_freq[note.index].into(),
+                        NOTE_FREQ[note.index].into(),
                         attack << 24 | decay << 16 | sustain | release << 8,
                         100,
                         match channel {
@@ -584,7 +605,9 @@ impl Tracker {
             InstrumentInput::Attack => InstrumentInput::Decay,
             InstrumentInput::Decay => InstrumentInput::Sustain,
             InstrumentInput::Sustain => InstrumentInput::Release,
-            InstrumentInput::Release => InstrumentInput::Release,
+            InstrumentInput::Release => InstrumentInput::Volume,
+            InstrumentInput::Volume => InstrumentInput::Peak,
+            InstrumentInput::Peak => InstrumentInput::Peak,
         }
     }
 
@@ -595,6 +618,8 @@ impl Tracker {
             InstrumentInput::Decay => InstrumentInput::Attack,
             InstrumentInput::Sustain => InstrumentInput::Decay,
             InstrumentInput::Release => InstrumentInput::Sustain,
+            InstrumentInput::Volume => InstrumentInput::Release,
+            InstrumentInput::Peak => InstrumentInput::Volume,
         }
     }
 
@@ -686,7 +711,7 @@ impl Tracker {
     pub fn persist(&self) {
         let layout_version_section_size: usize = 1;
         let song_section_size = self.song.len() * 4;
-        let instrumens_section_size = self.instruments.len() * 5;
+        let instrumens_section_size = self.instruments.len() * size_of::<Instrument>();
         let patterns_section_size = self.patterns.len() * 16 * 2;
         let stored_size = layout_version_section_size
             + song_section_size
@@ -740,7 +765,7 @@ impl Tracker {
         let mut tracker = Tracker::new();
 
         const SONG_SIZE: usize = 4;
-        let mut buf = [0u8; 1 + SONG_SIZE * 4 + MAX_INSTRUMENTS * 5 + MAX_PATTERNS * 16 * 2];
+        let mut buf = [0u8; 1 + SONG_SIZE * 4 + MAX_INSTRUMENTS * size_of::<Instrument>() + MAX_PATTERNS * 16 * 2];
 
         unsafe {
             diskr(buf.as_mut_ptr(), buf.len() as u32);
@@ -796,8 +821,10 @@ impl Tracker {
                 buf[next_byte + 2],
                 buf[next_byte + 3],
                 buf[next_byte + 4],
+                buf[next_byte + 5],
+                buf[next_byte + 6],
             );
-            next_byte += 5;
+            next_byte += 7;
             let instrument = Instrument::from_bytes(bytes);
             tracker.instruments[instrument_index] = instrument;
         }

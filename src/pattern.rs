@@ -67,7 +67,7 @@ fn on_button_up_press(inputs: &Inputs) {
     }
 }
 
-fn on_button_1_press(inputs: &Inputs) {
+fn on_button_1_press(_inputs: &Inputs) {
     unsafe {
         if let None = TRACKER.current_note() {
             let new_note = Note::new();
@@ -76,7 +76,7 @@ fn on_button_1_press(inputs: &Inputs) {
     }
 }
 
-fn on_button_1_double_press(inputs: &Inputs) {
+fn on_button_1_double_press(_inputs: &Inputs) {
     unsafe {
         if let Some(_) = TRACKER.current_note() {
             TRACKER.set_current_note(&None);

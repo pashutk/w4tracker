@@ -220,6 +220,22 @@ pub fn instrument_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {
         instrument.release(),
         InstrumentInput::Release,
     );
+
+    input(
+        10,
+        80,
+        "Volume",
+        instrument.volume(),
+        InstrumentInput::Volume,
+    );
+
+    input(
+        10,
+        90,
+        "Peak",
+        instrument.peak(),
+        InstrumentInput::Peak,
+    );
 }
 
 pub fn song_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {

@@ -14,6 +14,8 @@ pub enum InstrumentInput {
     Decay,
     Sustain,
     Release,
+    Volume,
+    Peak,
 }
 
 fn on_button_down_press(inputs: &Inputs) {
@@ -127,6 +129,12 @@ fn on_button_left_press(inputs: &Inputs) {
                         InstrumentInput::Release => {
                             selected_instrument.update_release(|a| a.saturating_sub(1))
                         }
+                        InstrumentInput::Volume => {
+                            selected_instrument.update_volume(|a| a.saturating_sub(1))
+                        }
+                        InstrumentInput::Peak => {
+                            selected_instrument.update_peak(|a| a.saturating_sub(1))
+                        }
                     }
                 },
             )
@@ -158,6 +166,12 @@ fn on_button_right_press(inputs: &Inputs) {
                         }
                         InstrumentInput::Release => {
                             selected_instrument.update_release(|a| a.saturating_add(1))
+                        }
+                        InstrumentInput::Volume => {
+                            selected_instrument.update_volume(|a| a.saturating_add(1))
+                        }
+                        InstrumentInput::Peak => {
+                            selected_instrument.update_peak(|a| a.saturating_add(1))
                         }
                     }
                 },
