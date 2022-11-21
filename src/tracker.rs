@@ -1,9 +1,9 @@
-use std::{borrow::BorrowMut, io::Read, ptr::addr_of};
+use std::{ptr::addr_of};
 
 use crate::{
     channel::Channel,
     instrument::InstrumentInput,
-    notes::{note_c3_index, note_freq, note_from_string, NOTES_PER_OCTAVE},
+    notes::{NOTE_C3_INDEX, NOTE_FREQ, NOTES_PER_OCTAVE},
     screen::Screen,
     wasm4::{
         diskr, diskw, tone, TONE_MODE1, TONE_MODE2, TONE_MODE3, TONE_MODE4, TONE_NOISE,
@@ -20,13 +20,13 @@ pub struct Note {
 impl Note {
     pub fn new() -> Self {
         Note {
-            index: note_c3_index,
+            index: NOTE_C3_INDEX,
             instrument: 0,
         }
     }
 
     pub fn increase_pitch(&mut self) {
-        if self.index < note_freq.len() - 1 {
+        if self.index < NOTE_FREQ.len() - 1 {
             self.index += 1;
         }
     }
@@ -38,11 +38,11 @@ impl Note {
     }
 
     pub fn increase_octave(&mut self) {
-        let max_value: usize = note_freq.len() - NOTES_PER_OCTAVE as usize;
+        let max_value: usize = NOTE_FREQ.len() - NOTES_PER_OCTAVE as usize;
         if self.index < max_value {
             self.index = self.index + NOTES_PER_OCTAVE as usize;
         } else {
-            self.index = note_freq.len();
+            self.index = NOTE_FREQ.len();
         }
     }
 
@@ -274,15 +274,6 @@ impl Row {
         }
     }
 
-    pub fn channel_mut(&mut self, channel: &Channel) -> &mut Option<usize> {
-        match channel {
-            Channel::Pulse1 => &mut self.pulse1,
-            Channel::Pulse2 => &mut self.pulse2,
-            Channel::Triangle => &mut self.triangle,
-            Channel::Noise => &mut self.noise,
-        }
-    }
-
     pub fn set_channel_value(&mut self, channel: &Channel, value: Option<usize>) {
         match channel {
             Channel::Pulse1 => self.pulse1 = value,
@@ -436,7 +427,7 @@ impl Tracker {
                     let sustain: u32 = instrument.sustain.into();
                     let release: u32 = instrument.release.into();
                     tone(
-                        note_freq[note.index].into(),
+                        NOTE_FREQ[note.index].into(),
                         attack << 24 | decay << 16 | sustain | release << 8,
                         100,
                         TONE_PULSE1 | duty_cycle,
@@ -453,7 +444,7 @@ impl Tracker {
                     let sustain: u32 = instrument.sustain.into();
                     let release: u32 = instrument.release.into();
                     tone(
-                        note_freq[note.index].into(),
+                        NOTE_FREQ[note.index].into(),
                         attack << 24 | decay << 16 | sustain | release << 8,
                         100,
                         TONE_PULSE2 | duty_cycle,
@@ -470,7 +461,7 @@ impl Tracker {
                     let sustain: u32 = instrument.sustain.into();
                     let release: u32 = instrument.release.into();
                     tone(
-                        note_freq[note.index].into(),
+                        NOTE_FREQ[note.index].into(),
                         attack << 24 | decay << 16 | sustain | release << 8,
                         100,
                         TONE_TRIANGLE | duty_cycle,
@@ -487,7 +478,7 @@ impl Tracker {
                     let sustain: u32 = instrument.sustain.into();
                     let release: u32 = instrument.release.into();
                     tone(
-                        note_freq[note.index].into(),
+                        NOTE_FREQ[note.index].into(),
                         attack << 24 | decay << 16 | sustain | release << 8,
                         100,
                         TONE_NOISE | duty_cycle,
@@ -505,7 +496,7 @@ impl Tracker {
                     let release: u32 = instrument.release.into();
                     let channel = self.selected_channel;
                     tone(
-                        note_freq[note.index].into(),
+                        NOTE_FREQ[note.index].into(),
                         attack << 24 | decay << 16 | sustain | release << 8,
                         100,
                         match channel {

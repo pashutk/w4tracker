@@ -107,7 +107,7 @@ fn on_button_right_press(inputs: &Inputs) {
     }
 }
 
-fn on_button_1_press(inputs: &Inputs) {
+fn on_button_1_press(_inputs: &Inputs) {
     unsafe {
         TIMERS.run_action_debounced(ActionId::SongAddPattern, Duration::from_millis(200), || {
             let selected_channel = TRACKER.selected_channel();
