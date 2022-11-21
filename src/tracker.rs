@@ -708,7 +708,7 @@ impl Tracker {
         self.song_tick
     }
 
-    pub fn persist(&self) { 
+    pub fn persist(&self) {
         let layout_version_section_size: usize = 1;
         let song_section_size = self.song.len() * 4;
         let instrumens_section_size = self.instruments.len() * size_of::<Instrument>();
