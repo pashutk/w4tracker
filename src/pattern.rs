@@ -3,8 +3,9 @@ use std::time::Duration;
 use crate::{
     inputs::{InputEvent, Inputs},
     navigation::{go_to_instrument_screen, go_to_song_screen},
+    notes::Note,
     timers::{ActionId, TIMERS},
-    tracker::{Column, Note, PlayMode, TRACKER},
+    tracker::{Column, PlayMode, TRACKER},
 };
 
 fn on_button_down_press(inputs: &Inputs) {

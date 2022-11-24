@@ -1,3 +1,5 @@
+use crate::instrument::MAX_INSTRUMENTS;
+
 pub const NOTE_NAME: [&str; 108] = [
     "C0", "C#0", "D0", "D#0", "E0", "F0", "F#0", "G0", "G#0", "A0", "A#0", "B0", "C1", "C#1", "D1",
     "D#1", "E1", "F1", "F#1", "G1", "G#1", "A1", "A#1", "B1", "C2", "C#2", "D2", "D#2", "E2", "F2",
@@ -21,6 +23,74 @@ pub const NOTE_FREQ: [u16; 108] = [
 pub const NOTE_C3_INDEX: usize = 36;
 
 pub const NOTES_PER_OCTAVE: u32 = 12;
+
+#[derive(Clone, Copy)]
+pub struct Note {
+    pub index: usize,
+    pub instrument: usize,
+}
+
+impl Note {
+    pub fn new() -> Self {
+        Note {
+            index: NOTE_C3_INDEX,
+            instrument: 0,
+        }
+    }
+
+    pub fn increase_pitch(&mut self) {
+        if self.index < NOTE_FREQ.len() - 1 {
+            self.index += 1;
+        }
+    }
+
+    pub fn decrease_pitch(&mut self) {
+        if self.index > 0 {
+            self.index -= 1;
+        }
+    }
+
+    pub fn increase_octave(&mut self) {
+        let max_value: usize = NOTE_FREQ.len() - NOTES_PER_OCTAVE as usize;
+        if self.index < max_value {
+            self.index = self.index + NOTES_PER_OCTAVE as usize;
+        } else {
+            self.index = NOTE_FREQ.len();
+        }
+    }
+
+    pub fn decrease_octave(&mut self) {
+        if (self.index as u32) >= NOTES_PER_OCTAVE {
+            self.index = self.index - NOTES_PER_OCTAVE as usize;
+        } else {
+            self.index = 0;
+        }
+    }
+
+    pub fn next_instrument(&mut self) {
+        if self.instrument < MAX_INSTRUMENTS - 1 {
+            self.instrument += 1;
+        }
+    }
+
+    pub fn prev_instrument(&mut self) {
+        if self.instrument > 0 {
+            self.instrument -= 1;
+        }
+    }
+
+    pub fn instrument_index(&self) -> usize {
+        self.instrument
+    }
+
+    pub fn note_index(&self) -> usize {
+        self.index
+    }
+
+    pub fn to_bytes(&self) -> (u8, u8) {
+        (self.index as u8, self.instrument as u8)
+    }
+}
 
 const fn letter_to_note_num(letter: char) -> Option<usize> {
     match letter {

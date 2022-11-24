@@ -1,8 +1,8 @@
 use crate::{
     channel::Channel,
-    instrument::InstrumentInput,
+    instrument::{DutyCycle, InstrumentInput},
     notes::note_to_render,
-    tracker::{Column, DutyCycle, PlayMode, Tracker},
+    tracker::{Column, PlayMode, Tracker},
     wasm4::{hline, rect, text, text_bytes, vline, DRAW_COLORS},
 };
 
@@ -229,13 +229,7 @@ pub fn instrument_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {
         InstrumentInput::Volume,
     );
 
-    input(
-        10,
-        90,
-        "Peak",
-        instrument.peak(),
-        InstrumentInput::Peak,
-    );
+    input(10, 90, "Peak", instrument.peak(), InstrumentInput::Peak);
 }
 
 pub fn song_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {

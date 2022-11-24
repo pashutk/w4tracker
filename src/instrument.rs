@@ -5,7 +5,212 @@ use crate::{
     navigation::go_to_pattern_screen,
     timers::{ActionId, TIMERS},
     tracker::{PlayMode, TRACKER},
+    wasm4::{TONE_MODE1, TONE_MODE2, TONE_MODE3, TONE_MODE4},
 };
+
+pub const MAX_INSTRUMENTS: usize = 0x20;
+
+#[derive(Clone, Copy, Default)]
+pub enum DutyCycle {
+    #[default]
+    Eighth,
+    Fourth,
+    Half,
+    ThreeFourth,
+}
+
+impl DutyCycle {
+    pub fn to_flag(&self) -> u32 {
+        match self {
+            Self::Eighth => TONE_MODE1,
+            Self::Fourth => TONE_MODE2,
+            Self::Half => TONE_MODE3,
+            Self::ThreeFourth => TONE_MODE4,
+        }
+    }
+
+    pub fn next(&self) -> Self {
+        match self {
+            DutyCycle::Eighth => DutyCycle::Fourth,
+            DutyCycle::Fourth => DutyCycle::Half,
+            DutyCycle::Half => DutyCycle::ThreeFourth,
+            DutyCycle::ThreeFourth => DutyCycle::ThreeFourth,
+        }
+    }
+
+    pub fn prev(&self) -> Self {
+        match self {
+            DutyCycle::Eighth => DutyCycle::Eighth,
+            DutyCycle::Fourth => DutyCycle::Eighth,
+            DutyCycle::Half => DutyCycle::Fourth,
+            DutyCycle::ThreeFourth => DutyCycle::Half,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Default)]
+pub struct Instrument {
+    duty_cycle: DutyCycle,
+    attack: u8,
+    decay: u8,
+    sustain: u8,
+    release: u8,
+    volume: u8,
+    peak: u8,
+}
+
+const MAX_VOLUME: u8 = 0x64;
+const MAX_PEAK: u8 = 0x64;
+
+impl Instrument {
+    pub const fn new(
+        duty_cycle: DutyCycle,
+        attack: u8,
+        decay: u8,
+        sustain: u8,
+        release: u8,
+        volume: u8,
+        peak: u8,
+    ) -> Instrument {
+        Instrument {
+            duty_cycle,
+            attack,
+            decay,
+            sustain,
+            release,
+            volume,
+            peak,
+        }
+    }
+
+    pub fn duty_cycle(&self) -> DutyCycle {
+        self.duty_cycle
+    }
+
+    pub fn attack(&self) -> u8 {
+        self.attack
+    }
+
+    pub fn decay(&self) -> u8 {
+        self.decay
+    }
+
+    pub fn sustain(&self) -> u8 {
+        self.sustain
+    }
+
+    pub fn release(&self) -> u8 {
+        self.release
+    }
+
+    pub fn volume(&self) -> u8 {
+        self.volume
+    }
+
+    pub fn peak(&self) -> u8 {
+        self.peak
+    }
+
+    pub fn update_duty_cycle<F>(&mut self, f: F)
+    where
+        F: FnOnce(DutyCycle) -> DutyCycle,
+    {
+        self.duty_cycle = f(self.duty_cycle)
+    }
+
+    pub fn update_attack<F>(&mut self, f: F)
+    where
+        F: FnOnce(u8) -> u8,
+    {
+        self.attack = f(self.attack)
+    }
+
+    pub fn update_decay<F>(&mut self, f: F)
+    where
+        F: FnOnce(u8) -> u8,
+    {
+        self.decay = f(self.decay)
+    }
+
+    pub fn update_sustain<F>(&mut self, f: F)
+    where
+        F: FnOnce(u8) -> u8,
+    {
+        self.sustain = f(self.sustain)
+    }
+
+    pub fn update_release<F>(&mut self, f: F)
+    where
+        F: FnOnce(u8) -> u8,
+    {
+        self.release = f(self.release)
+    }
+
+    pub fn update_volume<F>(&mut self, f: F)
+    where
+        F: FnOnce(u8) -> u8,
+    {
+        self.volume = f(self.volume).clamp(0, MAX_VOLUME);
+    }
+
+    pub fn update_peak<F>(&mut self, f: F)
+    where
+        F: FnOnce(u8) -> u8,
+    {
+        self.peak = f(self.peak).clamp(0, MAX_PEAK);
+    }
+
+    pub fn to_bytes(&self, api_version: u8) -> Vec<u8> {
+        match api_version {
+            1 => {
+                let mut v = vec![0_u8; 7];
+                v[0] = match self.duty_cycle {
+                    DutyCycle::Eighth => 0,
+                    DutyCycle::Fourth => 1,
+                    DutyCycle::Half => 2,
+                    DutyCycle::ThreeFourth => 3,
+                };
+                v[1] = self.attack;
+                v[2] = self.decay;
+                v[3] = self.release;
+                v[4] = self.sustain;
+                v[5] = self.volume;
+                v[6] = self.peak;
+                v
+            }
+            _ => panic!("Unsupported api version"),
+        }
+    }
+
+    pub fn from_bytes(bytes: (u8, u8, u8, u8, u8, u8, u8)) -> Self {
+        Instrument {
+            duty_cycle: match bytes.0 {
+                0 => DutyCycle::Eighth,
+                1 => DutyCycle::Fourth,
+                2 => DutyCycle::Half,
+                3 => DutyCycle::ThreeFourth,
+                _ => DutyCycle::Eighth,
+            },
+            attack: bytes.1,
+            decay: bytes.2,
+            sustain: bytes.3,
+            release: bytes.4,
+            volume: bytes.5,
+            peak: bytes.6,
+        }
+    }
+
+    pub fn get_duration(&self) -> u32 {
+        (self.attack as u32) << 24
+            | (self.decay as u32) << 16
+            | self.sustain as u32
+            | (self.release as u32) << 8
+    }
+
+    pub fn get_volume(&self) -> u32 {
+        (self.peak as u32) << 8 | self.volume as u32
+    }
+}
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum InstrumentInput {
