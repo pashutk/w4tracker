@@ -128,6 +128,9 @@ pub struct Instrument {
     peak: u8,
 }
 
+const MAX_VOLUME: u8 = 0x64;
+const MAX_PEAK: u8 = 0x64;
+
 impl Instrument {
     pub fn duty_cycle(&self) -> DutyCycle {
         self.duty_cycle
@@ -196,14 +199,14 @@ impl Instrument {
     where
         F: FnOnce(u8) -> u8,
     {
-        self.volume = f(self.volume)
+        self.volume = f(self.volume).clamp(0, MAX_VOLUME);
     }
 
     pub fn update_peak<F>(&mut self, f: F)
     where
         F: FnOnce(u8) -> u8,
     {
-        self.peak = f(self.peak)
+        self.peak = f(self.peak).clamp(0, MAX_PEAK);
     }
 
     pub fn to_bytes(&self, api_version: u8) -> Vec<u8> {
@@ -244,6 +247,17 @@ impl Instrument {
             volume: bytes.5,
             peak: bytes.6
         }
+    }
+
+    pub fn get_duration(&self) -> u32 {
+        (self.attack as u32) << 24
+            | (self.decay as u32) << 16
+            | self.sustain as u32
+            | (self.release as u32) << 8
+    }
+
+    pub fn get_volume(&self) -> u32 {
+        (self.peak as u32) << 8 | self.volume as u32
     }
 }
 
@@ -377,8 +391,8 @@ impl Tracker {
                 decay: 0,
                 sustain: 0x0f,
                 release: 0x0f,
-                volume: 0xff,
-                peak: 0xff
+                volume: 0x64,
+                peak: 0x64
             }; MAX_INSTRUMENTS],
             screen: Screen::Pattern,
             selected_instrument_index: 0,
@@ -422,14 +436,10 @@ impl Tracker {
                 }) {
                     let instrument = self.instruments[note.instrument];
                     let duty_cycle = instrument.duty_cycle.to_flag();
-                    let attack: u32 = instrument.attack.into();
-                    let decay: u32 = instrument.decay.into();
-                    let sustain: u32 = instrument.sustain.into();
-                    let release: u32 = instrument.release.into();
                     tone(
                         NOTE_FREQ[note.index].into(),
-                        attack << 24 | decay << 16 | sustain | release << 8,
-                        100,
+                        instrument.get_duration(),
+                        instrument.get_volume(),
                         TONE_PULSE1 | duty_cycle,
                     );
                 }
@@ -439,14 +449,10 @@ impl Tracker {
                 }) {
                     let instrument = self.instruments[note.instrument];
                     let duty_cycle = instrument.duty_cycle.to_flag();
-                    let attack: u32 = instrument.attack.into();
-                    let decay: u32 = instrument.decay.into();
-                    let sustain: u32 = instrument.sustain.into();
-                    let release: u32 = instrument.release.into();
                     tone(
                         NOTE_FREQ[note.index].into(),
-                        attack << 24 | decay << 16 | sustain | release << 8,
-                        100,
+                        instrument.get_duration(),
+                        instrument.get_volume(),
                         TONE_PULSE2 | duty_cycle,
                     );
                 }
@@ -456,14 +462,10 @@ impl Tracker {
                 }) {
                     let instrument = self.instruments[note.instrument];
                     let duty_cycle = instrument.duty_cycle.to_flag();
-                    let attack: u32 = instrument.attack.into();
-                    let decay: u32 = instrument.decay.into();
-                    let sustain: u32 = instrument.sustain.into();
-                    let release: u32 = instrument.release.into();
                     tone(
                         NOTE_FREQ[note.index].into(),
-                        attack << 24 | decay << 16 | sustain | release << 8,
-                        100,
+                        instrument.get_duration(),
+                        instrument.get_volume(),
                         TONE_TRIANGLE | duty_cycle,
                     );
                 }
@@ -473,14 +475,10 @@ impl Tracker {
                 }) {
                     let instrument = self.instruments[note.instrument];
                     let duty_cycle = instrument.duty_cycle.to_flag();
-                    let attack: u32 = instrument.attack.into();
-                    let decay: u32 = instrument.decay.into();
-                    let sustain: u32 = instrument.sustain.into();
-                    let release: u32 = instrument.release.into();
                     tone(
                         NOTE_FREQ[note.index].into(),
-                        attack << 24 | decay << 16 | sustain | release << 8,
-                        100,
+                        instrument.get_duration(),
+                        instrument.get_volume(),
                         TONE_NOISE | duty_cycle,
                     );
                 }
@@ -490,15 +488,11 @@ impl Tracker {
                 if let Some(note) = self.patterns[self.selected_pattern][pattern_index] {
                     let instrument = self.instruments[note.instrument];
                     let duty_cycle = instrument.duty_cycle.to_flag();
-                    let attack: u32 = instrument.attack.into();
-                    let decay: u32 = instrument.decay.into();
-                    let sustain: u32 = instrument.sustain.into();
-                    let release: u32 = instrument.release.into();
                     let channel = self.selected_channel;
                     tone(
                         NOTE_FREQ[note.index].into(),
-                        attack << 24 | decay << 16 | sustain | release << 8,
-                        100,
+                        instrument.get_duration(),
+                        instrument.get_volume(),
                         match channel {
                             Channel::Pulse1 => TONE_PULSE1,
                             Channel::Pulse2 => TONE_PULSE2,
