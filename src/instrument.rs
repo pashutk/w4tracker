@@ -50,7 +50,7 @@ fn on_button_down_press(inputs: &Inputs) {
                         InstrumentInput::Peak => {
                             selected_instrument.update_peak(|a| a.saturating_sub(0x10))
                         }
-                        _ => {}
+                        InstrumentInput::DutyCycle => {}
                     }
                 },
             )
@@ -92,7 +92,7 @@ fn on_button_up_press(inputs: &Inputs) {
                         InstrumentInput::Peak => {
                             selected_instrument.update_peak(|a| a.saturating_add(0x10))
                         }
-                        _ => {}
+                        InstrumentInput::DutyCycle => {}
                     }
                 },
             )
