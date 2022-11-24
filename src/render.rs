@@ -2,6 +2,7 @@ use crate::{
     channel::Channel,
     instrument::InstrumentInput,
     notes::note_to_render,
+    screen::Screen,
     tracker::{Column, DutyCycle, PlayMode, Tracker},
     wasm4::{hline, rect, text, text_bytes, vline, DRAW_COLORS},
 };
@@ -279,4 +280,13 @@ pub fn song_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {
 pub fn not_implemented_screen() {
     set_color(Color::Primary);
     text("Screen is not\nimplemented", 10, 10);
+}
+
+pub fn render_screen(screen: &Screen, tracker: &Tracker, x: i32, y: i32) {
+    match screen {
+        Screen::Pattern => pattern_screen(tracker, x, y),
+        Screen::Instrument => instrument_screen(tracker, x, y),
+        Screen::Song => song_screen(tracker, x, y),
+        _ => not_implemented_screen(),
+    }
 }

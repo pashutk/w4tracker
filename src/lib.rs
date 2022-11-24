@@ -16,6 +16,7 @@ mod wtime;
 
 use inputs::Inputs;
 use pattern::add_pattern_screen_handlers;
+use render::render_screen;
 use screen::Screen;
 // use song::add_song_screen_handlers;
 use timers::TIMERS;
@@ -40,11 +41,9 @@ fn update() {
         tracker = &TRACKER;
     };
 
-    match tracker.screen() {
-        Screen::Pattern => render::pattern_screen(tracker, 0, 0),
-        Screen::Instrument => render::instrument_screen(tracker, 0, 0),
-        Screen::Song => render::song_screen(tracker, 0, 0),
-        _ => render::not_implemented_screen(),
+    match tracker.screens() {
+        screen::Screens::Single(screen) => render_screen(screen, tracker, 0, 0),
+        screen::Screens::Transition(_from, to) => render_screen(to, tracker, 0, 0),
     }
 
     unsafe {

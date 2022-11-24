@@ -3,6 +3,7 @@ use std::time::Duration;
 use crate::{
     inputs::{InputEvent, Inputs},
     navigation::{go_to_instrument_screen, go_to_song_screen},
+    screen::Screen,
     timers::{ActionId, TIMERS},
     tracker::{Column, Note, PlayMode, TRACKER},
 };
@@ -115,7 +116,7 @@ fn on_button_right_press(inputs: &Inputs) {
                     if let Some(note) = TRACKER.current_note() {
                         TRACKER.set_selected_instrument_index(note.instrument_index());
                     }
-                    go_to_instrument_screen();
+                    go_to_instrument_screen(Screen::Pattern);
                 },
             );
         } else if TRACKER.selected_column() == Column::Note {

@@ -4,7 +4,7 @@ use crate::{
     channel::Channel,
     instrument::InstrumentInput,
     notes::{note_c3_index, note_freq, note_from_string, NOTES_PER_OCTAVE},
-    screen::Screen,
+    screen::{Screen, Screens},
     wasm4::{
         diskr, diskw, tone, TONE_MODE1, TONE_MODE2, TONE_MODE3, TONE_MODE4, TONE_NOISE,
         TONE_PULSE1, TONE_PULSE2, TONE_TRIANGLE,
@@ -331,7 +331,7 @@ pub struct Tracker {
     play: PlayMode,
     selected_column: Column,
     instruments: [Instrument; MAX_INSTRUMENTS], // save - 5 * 32 = 160b
-    screen: Screen,
+    screens: Screens,
     selected_instrument_index: usize,
     instrument_focus: InstrumentInput,
     selected_channel: Channel,
@@ -359,7 +359,7 @@ impl Tracker {
                 sustain: 0x0f,
                 release: 0x0f,
             }; MAX_INSTRUMENTS],
-            screen: Screen::Pattern,
+            screens: Screens::Single(Screen::Pattern),
             selected_instrument_index: 0,
             instrument_focus: InstrumentInput::DutyCycle,
             selected_channel: Channel::Pulse1,
@@ -386,8 +386,8 @@ impl Tracker {
         self.tick
     }
 
-    pub fn screen(&self) -> Screen {
-        self.screen
+    pub fn screens(&self) -> &Screens {
+        &self.screens
     }
 
     fn play_tick(&self) {
@@ -598,8 +598,8 @@ impl Tracker {
         }
     }
 
-    pub fn set_screen(&mut self, screen: Screen) {
-        self.screen = screen;
+    pub fn set_screens(&mut self, screens: Screens) {
+        self.screens = screens;
     }
 
     pub fn current_note(&self) -> &Option<Note> {

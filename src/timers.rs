@@ -1,8 +1,15 @@
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::HashMap,
+    sync::atomic::{AtomicUsize, Ordering},
+    time::Duration,
+};
 
 use crate::wtime::Winstant;
 
-pub static mut TIMERS: Timers = Timers { last_calls: None };
+pub static mut TIMERS: Timers = Timers {
+    last_calls: None,
+    intervals: vec![],
+};
 
 #[derive(Eq, Hash, PartialEq)]
 pub enum ActionId {
@@ -36,8 +43,20 @@ pub enum ActionId {
     SongAddPattern,
 }
 
+fn get_unique_usize() -> usize {
+    static VALUE: AtomicUsize = AtomicUsize::new(0);
+    VALUE.fetch_add(1, Ordering::Relaxed)
+}
+
+struct StoredInterval {
+    id: usize,
+    thunk: Box<dyn Fn()>,
+    interval: usize,
+}
+
 pub struct Timers {
     last_calls: Option<HashMap<ActionId, Winstant>>,
+    intervals: Vec<StoredInterval>,
 }
 
 impl Timers {
@@ -72,6 +91,31 @@ impl Timers {
             Some(last_call) if now > *last_call + t => self.run_action(action_id, action),
             None => self.run_action(action_id, action),
             _ => {}
+        }
+    }
+
+    pub fn set_interval<F>(&mut self, action: F, interval: usize) -> usize
+    where
+        F: Fn() + 'static,
+    {
+        let id = get_unique_usize();
+        self.intervals.push(StoredInterval {
+            id,
+            thunk: Box::new(action),
+            interval,
+        });
+        id
+    }
+
+    pub fn cancel_interval(&mut self, interval_id: usize) {
+        let mut i = 0;
+        while i < self.intervals.len() {
+            let x = &mut self.intervals[i];
+            if x.id == interval_id {
+                self.intervals.remove(i);
+            } else {
+                i += 1;
+            }
         }
     }
 }
