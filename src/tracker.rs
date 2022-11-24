@@ -1,265 +1,12 @@
-use std::{ptr::addr_of, mem::size_of};
+use std::{mem::size_of, ptr::addr_of};
 
 use crate::{
     channel::Channel,
-    instrument::InstrumentInput,
-    notes::{NOTE_C3_INDEX, NOTE_FREQ, NOTES_PER_OCTAVE},
+    instrument::{DutyCycle, Instrument, InstrumentInput, MAX_INSTRUMENTS},
+    notes::{Note, NOTE_FREQ},
     screen::Screen,
-    wasm4::{
-        diskr, diskw, tone, TONE_MODE1, TONE_MODE2, TONE_MODE3, TONE_MODE4, TONE_NOISE,
-        TONE_PULSE1, TONE_PULSE2, TONE_TRIANGLE,
-    },
+    wasm4::{diskr, diskw, tone, TONE_NOISE, TONE_PULSE1, TONE_PULSE2, TONE_TRIANGLE},
 };
-
-#[derive(Clone, Copy)]
-pub struct Note {
-    index: usize,
-    instrument: usize,
-}
-
-impl Note {
-    pub fn new() -> Self {
-        Note {
-            index: NOTE_C3_INDEX,
-            instrument: 0,
-        }
-    }
-
-    pub fn increase_pitch(&mut self) {
-        if self.index < NOTE_FREQ.len() - 1 {
-            self.index += 1;
-        }
-    }
-
-    pub fn decrease_pitch(&mut self) {
-        if self.index > 0 {
-            self.index -= 1;
-        }
-    }
-
-    pub fn increase_octave(&mut self) {
-        let max_value: usize = NOTE_FREQ.len() - NOTES_PER_OCTAVE as usize;
-        if self.index < max_value {
-            self.index = self.index + NOTES_PER_OCTAVE as usize;
-        } else {
-            self.index = NOTE_FREQ.len();
-        }
-    }
-
-    pub fn decrease_octave(&mut self) {
-        if (self.index as u32) >= NOTES_PER_OCTAVE {
-            self.index = self.index - NOTES_PER_OCTAVE as usize;
-        } else {
-            self.index = 0;
-        }
-    }
-
-    pub fn next_instrument(&mut self) {
-        if self.instrument < MAX_INSTRUMENTS - 1 {
-            self.instrument += 1;
-        }
-    }
-
-    pub fn prev_instrument(&mut self) {
-        if self.instrument > 0 {
-            self.instrument -= 1;
-        }
-    }
-
-    pub fn instrument_index(&self) -> usize {
-        self.instrument
-    }
-
-    pub fn note_index(&self) -> usize {
-        self.index
-    }
-
-    pub fn to_bytes(&self) -> (u8, u8) {
-        (self.index as u8, self.instrument as u8)
-    }
-}
-
-#[derive(Clone, Copy, Default)]
-pub enum DutyCycle {
-    #[default]
-    Eighth,
-    Fourth,
-    Half,
-    ThreeFourth,
-}
-
-impl DutyCycle {
-    fn to_flag(&self) -> u32 {
-        match self {
-            Self::Eighth => TONE_MODE1,
-            Self::Fourth => TONE_MODE2,
-            Self::Half => TONE_MODE3,
-            Self::ThreeFourth => TONE_MODE4,
-        }
-    }
-
-    pub fn next(&self) -> Self {
-        match self {
-            DutyCycle::Eighth => DutyCycle::Fourth,
-            DutyCycle::Fourth => DutyCycle::Half,
-            DutyCycle::Half => DutyCycle::ThreeFourth,
-            DutyCycle::ThreeFourth => DutyCycle::ThreeFourth,
-        }
-    }
-
-    pub fn prev(&self) -> Self {
-        match self {
-            DutyCycle::Eighth => DutyCycle::Eighth,
-            DutyCycle::Fourth => DutyCycle::Eighth,
-            DutyCycle::Half => DutyCycle::Fourth,
-            DutyCycle::ThreeFourth => DutyCycle::Half,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Default)]
-pub struct Instrument {
-    duty_cycle: DutyCycle,
-    attack: u8,
-    decay: u8,
-    sustain: u8,
-    release: u8,
-    volume: u8,
-    peak: u8,
-}
-
-const MAX_VOLUME: u8 = 0x64;
-const MAX_PEAK: u8 = 0x64;
-
-impl Instrument {
-    pub fn duty_cycle(&self) -> DutyCycle {
-        self.duty_cycle
-    }
-
-    pub fn attack(&self) -> u8 {
-        self.attack
-    }
-
-    pub fn decay(&self) -> u8 {
-        self.decay
-    }
-
-    pub fn sustain(&self) -> u8 {
-        self.sustain
-    }
-
-    pub fn release(&self) -> u8 {
-        self.release
-    }
-
-    pub fn volume(&self) -> u8 {
-        self.volume
-    }
-
-    pub fn peak(&self) -> u8 {
-        self.peak
-    }
-
-    pub fn update_duty_cycle<F>(&mut self, f: F)
-    where
-        F: FnOnce(DutyCycle) -> DutyCycle,
-    {
-        self.duty_cycle = f(self.duty_cycle)
-    }
-
-    pub fn update_attack<F>(&mut self, f: F)
-    where
-        F: FnOnce(u8) -> u8,
-    {
-        self.attack = f(self.attack)
-    }
-
-    pub fn update_decay<F>(&mut self, f: F)
-    where
-        F: FnOnce(u8) -> u8,
-    {
-        self.decay = f(self.decay)
-    }
-
-    pub fn update_sustain<F>(&mut self, f: F)
-    where
-        F: FnOnce(u8) -> u8,
-    {
-        self.sustain = f(self.sustain)
-    }
-
-    pub fn update_release<F>(&mut self, f: F)
-    where
-        F: FnOnce(u8) -> u8,
-    {
-        self.release = f(self.release)
-    }
-
-    pub fn update_volume<F>(&mut self, f: F)
-    where
-        F: FnOnce(u8) -> u8,
-    {
-        self.volume = f(self.volume).clamp(0, MAX_VOLUME);
-    }
-
-    pub fn update_peak<F>(&mut self, f: F)
-    where
-        F: FnOnce(u8) -> u8,
-    {
-        self.peak = f(self.peak).clamp(0, MAX_PEAK);
-    }
-
-    pub fn to_bytes(&self, api_version: u8) -> Vec<u8> {
-        match api_version {
-            1 => {
-                let mut v = vec![0_u8; 7];
-                v[0] = match self.duty_cycle {
-                    DutyCycle::Eighth => 0,
-                    DutyCycle::Fourth => 1,
-                    DutyCycle::Half => 2,
-                    DutyCycle::ThreeFourth => 3,
-                };
-                v[1] = self.attack;
-                v[2] = self.decay;
-                v[3] = self.release;
-                v[4] = self.sustain;
-                v[5] = self.volume;
-                v[6] = self.peak;
-                v
-            }
-            _ => panic!("Unsupported api version"),
-        }
-    }
-
-    pub fn from_bytes(bytes: (u8, u8, u8, u8, u8, u8, u8)) -> Self {
-        Instrument {
-            duty_cycle: match bytes.0 {
-                0 => DutyCycle::Eighth,
-                1 => DutyCycle::Fourth,
-                2 => DutyCycle::Half,
-                3 => DutyCycle::ThreeFourth,
-                _ => DutyCycle::Eighth,
-            },
-            attack: bytes.1,
-            decay: bytes.2,
-            sustain: bytes.3,
-            release: bytes.4,
-            volume: bytes.5,
-            peak: bytes.6
-        }
-    }
-
-    pub fn get_duration(&self) -> u32 {
-        (self.attack as u32) << 24
-            | (self.decay as u32) << 16
-            | self.sustain as u32
-            | (self.release as u32) << 8
-    }
-
-    pub fn get_volume(&self) -> u32 {
-        (self.peak as u32) << 8 | self.volume as u32
-    }
-}
 
 #[derive(PartialEq, Clone, Copy, Default)]
 pub enum Column {
@@ -354,8 +101,6 @@ pub enum PlayMode {
     Idle,
 }
 
-const MAX_INSTRUMENTS: usize = 0x20;
-
 pub struct Tracker {
     frame: u32,
     tick: u8,
@@ -385,15 +130,8 @@ impl Tracker {
             cursor_tick: 0,
             play: PlayMode::Idle,
             selected_column: Column::Note,
-            instruments: [Instrument {
-                duty_cycle: DutyCycle::Eighth,
-                attack: 0,
-                decay: 0,
-                sustain: 0x0f,
-                release: 0x0f,
-                volume: 0x64,
-                peak: 0x64
-            }; MAX_INSTRUMENTS],
+            instruments: [Instrument::new(DutyCycle::Eighth, 0, 0, 0x0f, 0x0f, 0x64, 0x64);
+                MAX_INSTRUMENTS],
             screen: Screen::Pattern,
             selected_instrument_index: 0,
             instrument_focus: InstrumentInput::DutyCycle,
@@ -435,7 +173,7 @@ impl Tracker {
                     self.patterns[pulse1_pattern_index][pattern_index]
                 }) {
                     let instrument = self.instruments[note.instrument];
-                    let duty_cycle = instrument.duty_cycle.to_flag();
+                    let duty_cycle = instrument.duty_cycle().to_flag();
                     tone(
                         NOTE_FREQ[note.index].into(),
                         instrument.get_duration(),
@@ -448,7 +186,7 @@ impl Tracker {
                     self.patterns[pulse2_pattern_index][pattern_index]
                 }) {
                     let instrument = self.instruments[note.instrument];
-                    let duty_cycle = instrument.duty_cycle.to_flag();
+                    let duty_cycle = instrument.duty_cycle().to_flag();
                     tone(
                         NOTE_FREQ[note.index].into(),
                         instrument.get_duration(),
@@ -461,7 +199,7 @@ impl Tracker {
                     self.patterns[triangle_pattern_index][pattern_index]
                 }) {
                     let instrument = self.instruments[note.instrument];
-                    let duty_cycle = instrument.duty_cycle.to_flag();
+                    let duty_cycle = instrument.duty_cycle().to_flag();
                     tone(
                         NOTE_FREQ[note.index].into(),
                         instrument.get_duration(),
@@ -474,7 +212,7 @@ impl Tracker {
                     self.patterns[noise_pattern_index][pattern_index]
                 }) {
                     let instrument = self.instruments[note.instrument];
-                    let duty_cycle = instrument.duty_cycle.to_flag();
+                    let duty_cycle = instrument.duty_cycle().to_flag();
                     tone(
                         NOTE_FREQ[note.index].into(),
                         instrument.get_duration(),
@@ -487,7 +225,7 @@ impl Tracker {
                 let pattern_index: usize = self.tick.into();
                 if let Some(note) = self.patterns[self.selected_pattern][pattern_index] {
                     let instrument = self.instruments[note.instrument];
-                    let duty_cycle = instrument.duty_cycle.to_flag();
+                    let duty_cycle = instrument.duty_cycle().to_flag();
                     let channel = self.selected_channel;
                     tone(
                         NOTE_FREQ[note.index].into(),
@@ -759,7 +497,10 @@ impl Tracker {
         let mut tracker = Tracker::new();
 
         const SONG_SIZE: usize = 4;
-        let mut buf = [0u8; 1 + SONG_SIZE * 4 + MAX_INSTRUMENTS * size_of::<Instrument>() + MAX_PATTERNS * 16 * 2];
+        let mut buf = [0u8; 1
+            + SONG_SIZE * 4
+            + MAX_INSTRUMENTS * size_of::<Instrument>()
+            + MAX_PATTERNS * 16 * 2];
 
         unsafe {
             diskr(buf.as_mut_ptr(), buf.len() as u32);
