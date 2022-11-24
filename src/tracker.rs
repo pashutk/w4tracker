@@ -128,6 +128,9 @@ pub struct Instrument {
     peak: u8,
 }
 
+const MAX_VOLUME: u8 = 0x64;
+const MAX_PEAK: u8 = 0x64;
+
 impl Instrument {
     pub fn duty_cycle(&self) -> DutyCycle {
         self.duty_cycle
@@ -196,14 +199,14 @@ impl Instrument {
     where
         F: FnOnce(u8) -> u8,
     {
-        self.volume = f(self.volume)
+        self.volume = f(self.volume).clamp(0, MAX_VOLUME);
     }
 
     pub fn update_peak<F>(&mut self, f: F)
     where
         F: FnOnce(u8) -> u8,
     {
-        self.peak = f(self.peak)
+        self.peak = f(self.peak).clamp(0, MAX_PEAK);
     }
 
     pub fn to_bytes(&self, api_version: u8) -> Vec<u8> {
@@ -377,8 +380,8 @@ impl Tracker {
                 decay: 0,
                 sustain: 0x0f,
                 release: 0x0f,
-                volume: 0xff,
-                peak: 0xff
+                volume: 0x64,
+                peak: 0x64
             }; MAX_INSTRUMENTS],
             screen: Screen::Pattern,
             selected_instrument_index: 0,
