@@ -101,6 +101,10 @@ pub enum PlayMode {
     Idle,
 }
 
+const SONG_SIZE: usize = 4;
+
+type Song = [Row; SONG_SIZE];
+
 pub struct Tracker {
     frame: u32,
     tick: u8,
@@ -114,7 +118,7 @@ pub struct Tracker {
     instrument_focus: InstrumentInput,
     selected_channel: Channel,
     song_cursor_row_index: usize,
-    song: [Row; 4], // save 16b
+    song: Song, // save Song.len() * 4
     selected_pattern: usize,
     song_tick: usize,
 }
@@ -142,7 +146,7 @@ impl Tracker {
                 pulse2: None,
                 triangle: None,
                 noise: None,
-            }; 4],
+            }; SONG_SIZE],
             selected_pattern: 0,
             song_tick: 0,
         }
@@ -403,9 +407,10 @@ impl Tracker {
     }
 
     pub fn next_row_song_cursor(&mut self) {
+        const LAST_TO_MOVE: usize = SONG_SIZE - 2;
         self.song_cursor_row_index = match self.song_cursor_row_index {
-            x @ 0..=2 => x + 1,
-            _ => 3,
+            x @ 0..=LAST_TO_MOVE => x + 1,
+            _ => SONG_SIZE - 1,
         }
     }
 
@@ -416,11 +421,11 @@ impl Tracker {
         }
     }
 
-    pub fn song(&self) -> &[Row; 4] {
+    pub fn song(&self) -> &Song {
         &self.song
     }
 
-    pub fn song_mut(&mut self) -> &mut [Row; 4] {
+    pub fn song_mut(&mut self) -> &mut Song {
         &mut self.song
     }
 
@@ -457,7 +462,7 @@ impl Tracker {
         buf[0] = STORAGE_LAYOUT_VERSION;
         next_byte += 1;
 
-        // song (4*4)
+        // song (song.len()*4)
         for row in self.song {
             let row_bytes = row.to_bytes(STORAGE_LAYOUT_VERSION);
             for byte in row_bytes {
@@ -496,7 +501,6 @@ impl Tracker {
     pub fn restore() -> Tracker {
         let mut tracker = Tracker::new();
 
-        const SONG_SIZE: usize = 4;
         let mut buf = [0u8; 1
             + SONG_SIZE * 4
             + MAX_INSTRUMENTS * size_of::<Instrument>()

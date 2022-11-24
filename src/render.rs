@@ -258,12 +258,13 @@ pub fn song_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {
 
     let selected_channel = tracker.selected_channel();
     let row = tracker.song_cursor_row();
+    let song = tracker.song();
     for channel in Channel::iterator() {
         let x = channel.to_x();
-        for line in 0..4 {
+        for line in 0..song.len() {
             let y: i32 = 30 + line as i32 * 10;
 
-            let val = match tracker.song()[line].channel(&channel) {
+            let val = match song[line].channel(&channel) {
                 Some(index) => format!("{:02X}", index),
                 None => "--".to_string(),
             };
