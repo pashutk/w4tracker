@@ -31,8 +31,9 @@ jobs:
         with:
           node-version: '16.x'
       - run: npx wasm-opt -Oz --strip-producers --dce --zero-filled-memory cart_snip.wasm -o cart_snip_opt.wasm
-      - run: npm install -g wasm4 
-      - run: w4 bundle cart_snip_opt.wasm --title "Wow" --html index.html
+      # - run: npm install -g wasm4 
+      - run: wget https://github.com/pashutk/wasm4/releases/download/v0.0.1/w4-linux.zip && 7z x w4-linux.zip && chmod +x ./w4
+      - run: ./w4 bundle cart_snip_opt.wasm --title "w4tracker" --html index.html
       - run: mkdir _build && mv index.html _build/index.html
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
