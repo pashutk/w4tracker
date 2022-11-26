@@ -23,6 +23,8 @@ jobs:
         with:
           command: build
           args: --release
+        env:
+          EXTENDED_DISK_SIZE: "1"
       - run: cp target/wasm32-unknown-unknown/release/cart.wasm ./cart.wasm
       - run: wasm-snip --snip-rust-panicking-code cart.wasm > cart_snip.wasm
       - uses: actions/setup-node@v2
