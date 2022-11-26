@@ -101,13 +101,9 @@ pub enum PlayMode {
     Idle,
 }
 
-const EXTENDED_DISK_SIZE_ENV: Option<&'static str> = option_env!("EXTENDED_DISK_SIZE");
+const EXTENDED_DISK_SIZE_ENV: bool = option_env!("EXTENDED_DISK_SIZE").is_some();
 
-const SONG_SIZE: usize = if let Some(_) = EXTENDED_DISK_SIZE_ENV {
-    10
-} else {
-    4
-};
+const SONG_SIZE: usize = if EXTENDED_DISK_SIZE_ENV { 8 } else { 4 };
 
 type Song = [Row; SONG_SIZE];
 
@@ -277,7 +273,7 @@ impl Tracker {
         self.frame = if self.frame == 7 {
             self.tick = if self.tick == 15 {
                 if let PlayMode::Song = self.play {
-                    self.song_tick = if self.song_tick == 3 {
+                    self.song_tick = if self.song_tick == SONG_SIZE - 1 {
                         0
                     } else {
                         self.song_tick + 1
