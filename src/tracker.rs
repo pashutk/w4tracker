@@ -101,7 +101,13 @@ pub enum PlayMode {
     Idle,
 }
 
-const SONG_SIZE: usize = 4;
+const EXTENDED_DISK_SIZE_ENV: Option<&'static str> = option_env!("EXTENDED_DISK_SIZE");
+
+const SONG_SIZE: usize = if let Some(_) = EXTENDED_DISK_SIZE_ENV {
+    10
+} else {
+    4
+};
 
 type Song = [Row; SONG_SIZE];
 
