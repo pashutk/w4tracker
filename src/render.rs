@@ -1,9 +1,9 @@
 use crate::{
     channel::Channel,
-    instrument::InstrumentInput,
+    instrument::{DutyCycle, InstrumentInput},
     notes::note_to_render,
     screen::{Screen, Screens},
-    tracker::{Column, DutyCycle, PlayMode, Tracker},
+    tracker::{Column, PlayMode, Tracker},
     wasm4::{hline, rect, text, text_bytes, vline, DRAW_COLORS, SCREEN_SIZE},
 };
 

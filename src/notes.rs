@@ -1,4 +1,6 @@
-pub const note_name: [&str; 108] = [
+use crate::instrument::MAX_INSTRUMENTS;
+
+pub const NOTE_NAME: [&str; 108] = [
     "C0", "C#0", "D0", "D#0", "E0", "F0", "F#0", "G0", "G#0", "A0", "A#0", "B0", "C1", "C#1", "D1",
     "D#1", "E1", "F1", "F#1", "G1", "G#1", "A1", "A#1", "B1", "C2", "C#2", "D2", "D#2", "E2", "F2",
     "F#2", "G2", "G#2", "A2", "A#2", "B2", "C3", "C#3", "D3", "D#3", "E3", "F3", "F#3", "G3",
@@ -9,7 +11,7 @@ pub const note_name: [&str; 108] = [
     "F#8", "G8", "G#8", "A8", "A#8", "B8",
 ];
 
-pub const note_freq: [u16; 108] = [
+pub const NOTE_FREQ: [u16; 108] = [
     16, 17, 18, 19, 21, 22, 23, 25, 26, 28, 29, 31, 33, 35, 37, 39, 41, 44, 46, 49, 52, 55, 58, 62,
     65, 69, 73, 78, 82, 87, 93, 98, 104, 110, 117, 123, 131, 139, 147, 156, 165, 175, 185, 196,
     208, 220, 233, 247, 262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494, 523, 554, 587,
@@ -18,9 +20,77 @@ pub const note_freq: [u16; 108] = [
     4186, 4435, 4699, 4978, 5274, 5588, 5920, 6272, 6645, 7040, 7459, 7902,
 ];
 
-pub const note_c3_index: usize = 36;
+pub const NOTE_C3_INDEX: usize = 36;
 
 pub const NOTES_PER_OCTAVE: u32 = 12;
+
+#[derive(Clone, Copy)]
+pub struct Note {
+    pub index: usize,
+    pub instrument: usize,
+}
+
+impl Note {
+    pub fn new() -> Self {
+        Note {
+            index: NOTE_C3_INDEX,
+            instrument: 0,
+        }
+    }
+
+    pub fn increase_pitch(&mut self) {
+        if self.index < NOTE_FREQ.len() - 1 {
+            self.index += 1;
+        }
+    }
+
+    pub fn decrease_pitch(&mut self) {
+        if self.index > 0 {
+            self.index -= 1;
+        }
+    }
+
+    pub fn increase_octave(&mut self) {
+        let max_value: usize = NOTE_FREQ.len() - NOTES_PER_OCTAVE as usize;
+        if self.index < max_value {
+            self.index = self.index + NOTES_PER_OCTAVE as usize;
+        } else {
+            self.index = NOTE_FREQ.len();
+        }
+    }
+
+    pub fn decrease_octave(&mut self) {
+        if (self.index as u32) >= NOTES_PER_OCTAVE {
+            self.index = self.index - NOTES_PER_OCTAVE as usize;
+        } else {
+            self.index = 0;
+        }
+    }
+
+    pub fn next_instrument(&mut self) {
+        if self.instrument < MAX_INSTRUMENTS - 1 {
+            self.instrument += 1;
+        }
+    }
+
+    pub fn prev_instrument(&mut self) {
+        if self.instrument > 0 {
+            self.instrument -= 1;
+        }
+    }
+
+    pub fn instrument_index(&self) -> usize {
+        self.instrument
+    }
+
+    pub fn note_index(&self) -> usize {
+        self.index
+    }
+
+    pub fn to_bytes(&self) -> (u8, u8) {
+        (self.index as u8, self.instrument as u8)
+    }
+}
 
 const fn letter_to_note_num(letter: char) -> Option<usize> {
     match letter {

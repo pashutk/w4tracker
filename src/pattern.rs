@@ -3,9 +3,10 @@ use std::time::Duration;
 use crate::{
     inputs::{InputEvent, Inputs},
     navigation::{go_to_instrument_screen, go_to_song_screen},
+    notes::Note,
     screen::Screen,
     timers::{ActionId, TIMERS},
-    tracker::{Column, Note, PlayMode, TRACKER},
+    tracker::{Column, PlayMode, TRACKER},
 };
 
 fn on_button_down_press(inputs: &Inputs) {
@@ -68,7 +69,7 @@ fn on_button_up_press(inputs: &Inputs) {
     }
 }
 
-fn on_button_1_press(inputs: &Inputs) {
+fn on_button_1_press(_inputs: &Inputs) {
     unsafe {
         if let None = TRACKER.current_note() {
             let new_note = Note::new();
@@ -77,7 +78,7 @@ fn on_button_1_press(inputs: &Inputs) {
     }
 }
 
-fn on_button_1_double_press(inputs: &Inputs) {
+fn on_button_1_double_press(_inputs: &Inputs) {
     unsafe {
         if let Some(_) = TRACKER.current_note() {
             TRACKER.set_current_note(&None);
