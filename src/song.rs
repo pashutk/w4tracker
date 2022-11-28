@@ -3,6 +3,7 @@ use std::time::Duration;
 use crate::{
     inputs::{InputEvent, Inputs},
     navigation::go_to_pattern_screen,
+    screen::Screen,
     timers::{ActionId, TIMERS},
     tracker::{PlayMode, TRACKER},
 };
@@ -80,7 +81,7 @@ fn on_button_right_press(inputs: &Inputs) {
                         None => 0,
                     };
                     TRACKER.set_selected_pattern(selected_pattern);
-                    go_to_pattern_screen();
+                    go_to_pattern_screen(Screen::Song);
                 },
             );
         } else if inputs.is_button1_pressed() {

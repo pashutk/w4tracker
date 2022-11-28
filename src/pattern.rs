@@ -153,7 +153,7 @@ fn on_button_left_press(inputs: &Inputs) {
                 ActionId::NavPrevScreen,
                 Duration::from_millis(200),
                 || {
-                    go_to_song_screen();
+                    go_to_song_screen(Screen::Pattern);
                 },
             );
         } else if TRACKER.selected_column() == Column::Instrument {
