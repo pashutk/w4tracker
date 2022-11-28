@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, time::Duration};
+use std::{borrow::Borrow, time::Duration, vec};
 
 use crate::{
     instrument::add_instrument_screen_handlers,
@@ -7,6 +7,7 @@ use crate::{
     song::add_song_screen_handlers,
     timers::TIMERS,
     tracker::TRACKER,
+    unique_usize::get_unique_usize,
     wasm4::trace,
     wtime::Winstant,
     INPUTS,
@@ -18,25 +19,29 @@ pub unsafe fn go_to_pattern_screen() {
     add_pattern_screen_handlers(&mut INPUTS);
 }
 
+const ANIM_DURATION: f32 = 300.0;
+
 pub unsafe fn go_to_instrument_screen(from: Screen) {
-    TRACKER.set_screens(Screens::Transition(from, Screen::Instrument));
-    // let mut interval = None;
+    TRACKER.set_screens(Screens::Transition(from, Screen::Instrument, 0.0));
+
     let start = Winstant::now();
-    let mut x: Option<usize> = None;
-    x = Some(TIMERS.set_interval(
-        || {
+
+    let interval_id = get_unique_usize();
+    TIMERS.set_interval(
+        interval_id,
+        move || {
             let now = Winstant::now();
-            trace("action");
-            if start + Duration::from_millis(200) > now {
-                trace(now.duration_since(start).as_millis().to_string())
-            } else if let Some(a) = x {
-                TIMERS.cancel_interval(a);
+            let since_start = now.duration_since(start);
+            let progress: f32 = since_start.as_millis() as f32 / ANIM_DURATION;
+            if progress < 1.0 {
+                TRACKER.set_screens(Screens::Transition(from, Screen::Instrument, progress));
+            } else {
+                TRACKER.set_screens(Screens::Single(Screen::Instrument));
+                TIMERS.cancel_interval(interval_id);
             }
-            // if start
-            // if let Some(id) = interval {}
         },
         1,
-    ));
+    );
 
     INPUTS.unlisten();
     add_instrument_screen_handlers(&mut INPUTS);

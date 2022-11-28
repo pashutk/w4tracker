@@ -152,7 +152,11 @@ pub fn instrument_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {
     let duty_cycle_x = 10;
     let duty_cycle_y = 30;
     let text_size_x = value_column_x - 10;
-    text("Duty cycle", duty_cycle_x, duty_cycle_y);
+    text(
+        "Duty cycle",
+        relative_x(duty_cycle_x),
+        relative_y(duty_cycle_y),
+    );
     if focus == InstrumentInput::DutyCycle {
         rect(
             relative_x(duty_cycle_x + text_size_x - 1),

@@ -8,5 +8,5 @@ pub enum Screen {
 
 pub enum Screens {
     Single(Screen),
-    Transition(Screen, Screen),
+    Transition(Screen, Screen, f32),
 }

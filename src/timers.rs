@@ -1,10 +1,6 @@
-use std::{
-    collections::HashMap,
-    sync::atomic::{AtomicUsize, Ordering},
-    time::Duration,
-};
+use std::{collections::HashMap, time::Duration, vec};
 
-use crate::wtime::Winstant;
+use crate::{unique_usize::get_unique_usize, wasm4::trace, wtime::Winstant};
 
 pub static mut TIMERS: Timers = Timers {
     last_calls: None,
@@ -41,11 +37,6 @@ pub enum ActionId {
     SongIncrementPattern,
     SongNextChannel,
     SongAddPattern,
-}
-
-fn get_unique_usize() -> usize {
-    static VALUE: AtomicUsize = AtomicUsize::new(0);
-    VALUE.fetch_add(1, Ordering::Relaxed)
 }
 
 struct StoredInterval {
@@ -94,11 +85,10 @@ impl Timers {
         }
     }
 
-    pub fn set_interval<F>(&mut self, action: F, interval: usize) -> usize
+    pub fn set_interval<F>(&mut self, id: usize, action: F, interval: usize) -> usize
     where
         F: Fn() + 'static,
     {
-        let id = get_unique_usize();
         self.intervals.push(StoredInterval {
             id,
             thunk: Box::new(action),
@@ -116,6 +106,13 @@ impl Timers {
             } else {
                 i += 1;
             }
+        }
+    }
+
+    pub fn tick(&self) {
+        for interval in &self.intervals {
+            let x = &interval.thunk;
+            x();
         }
     }
 }
