@@ -5,3 +5,8 @@ pub enum Screen {
     Pattern,
     Instrument,
 }
+
+pub enum Screens {
+    Single(Screen),
+    Transition(Screen, Screen, f32),
+}

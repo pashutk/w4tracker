@@ -3,6 +3,7 @@ use std::time::Duration;
 use crate::{
     inputs::{InputEvent, Inputs},
     navigation::go_to_pattern_screen,
+    screen::Screen,
     timers::{ActionId, TIMERS},
     tracker::{PlayMode, TRACKER},
     wasm4::{TONE_MODE1, TONE_MODE2, TONE_MODE3, TONE_MODE4},
@@ -321,7 +322,7 @@ fn on_button_left_press(inputs: &Inputs) {
             TIMERS.run_action_debounced(
                 ActionId::NavPrevScreen,
                 Duration::from_millis(200),
-                || go_to_pattern_screen(),
+                || go_to_pattern_screen(Screen::Instrument),
             );
         } else if inputs.is_button1_pressed() {
             TIMERS.run_action_debounced(

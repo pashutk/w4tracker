@@ -11,12 +11,13 @@ mod screen;
 mod song;
 mod timers;
 mod tracker;
+mod unique_usize;
 mod wasm4;
 mod wtime;
 
 use inputs::Inputs;
 use pattern::add_pattern_screen_handlers;
-use screen::Screen;
+use render::render_screens;
 // use song::add_song_screen_handlers;
 use timers::TIMERS;
 use tracker::{Tracker, TRACKER};
@@ -40,16 +41,12 @@ fn update() {
         tracker = &TRACKER;
     };
 
-    match tracker.screen() {
-        Screen::Pattern => render::pattern_screen(tracker, 0, 0),
-        Screen::Instrument => render::instrument_screen(tracker, 0, 0),
-        Screen::Song => render::song_screen(tracker, 0, 0),
-        _ => render::not_implemented_screen(),
-    }
+    render_screens(tracker.screens(), tracker);
 
     unsafe {
         TRACKER.update();
         INPUTS.tick();
+        TIMERS.tick();
     }
 
     Winstant::tick();

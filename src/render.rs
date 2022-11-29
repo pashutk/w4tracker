@@ -2,8 +2,9 @@ use crate::{
     channel::Channel,
     instrument::{DutyCycle, InstrumentInput},
     notes::note_to_render,
+    screen::{Screen, Screens},
     tracker::{Column, PlayMode, Tracker},
-    wasm4::{hline, rect, text, text_bytes, vline, DRAW_COLORS},
+    wasm4::{hline, rect, text, text_bytes, vline, DRAW_COLORS, SCREEN_SIZE},
 };
 
 enum Color {
@@ -151,7 +152,11 @@ pub fn instrument_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {
     let duty_cycle_x = 10;
     let duty_cycle_y = 30;
     let text_size_x = value_column_x - 10;
-    text("Duty cycle", duty_cycle_x, duty_cycle_y);
+    text(
+        "Duty cycle",
+        relative_x(duty_cycle_x),
+        relative_y(duty_cycle_y),
+    );
     if focus == InstrumentInput::DutyCycle {
         rect(
             relative_x(duty_cycle_x + text_size_x - 1),
@@ -258,13 +263,12 @@ pub fn song_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {
 
     let selected_channel = tracker.selected_channel();
     let row = tracker.song_cursor_row();
-    let song = tracker.song();
     for channel in Channel::iterator() {
         let x = channel.to_x();
-        for line in 0..song.len() {
+        for line in 0..4 {
             let y: i32 = 30 + line as i32 * 10;
 
-            let val = match song[line].channel(&channel) {
+            let val = match tracker.song()[line].channel(&channel) {
                 Some(index) => format!("{:02X}", index),
                 None => "--".to_string(),
             };
@@ -290,4 +294,53 @@ pub fn song_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {
 pub fn not_implemented_screen() {
     set_color(Color::Primary);
     text("Screen is not\nimplemented", 10, 10);
+}
+
+fn render_screen(screen: &Screen, tracker: &Tracker, x: i32, y: i32) {
+    match screen {
+        Screen::Pattern => pattern_screen(tracker, x, y),
+        Screen::Instrument => instrument_screen(tracker, x, y),
+        Screen::Song => song_screen(tracker, x, y),
+        _ => not_implemented_screen(),
+    }
+}
+
+enum TransitionDirection {
+    Left,
+    Right,
+}
+
+fn direction(from: Screen, to: Screen) -> TransitionDirection {
+    match (from, to) {
+        (Screen::Song, Screen::Pattern) => TransitionDirection::Right,
+        (Screen::Pattern, Screen::Song) => TransitionDirection::Left,
+        (Screen::Pattern, Screen::Instrument) => TransitionDirection::Right,
+        (Screen::Instrument, Screen::Pattern) => TransitionDirection::Left,
+        _ => TransitionDirection::Right,
+    }
+}
+
+const SCREEN_SIZE_F32: f32 = SCREEN_SIZE as f32;
+
+fn ease_out_quart(progress: f32) -> f32 {
+    1.0 - (1.0 - progress).powi(4)
+}
+
+pub fn render_screens(screens: &Screens, tracker: &Tracker) {
+    match screens {
+        Screens::Single(screen) => render_screen(screen, tracker, 0, 0),
+        Screens::Transition(from, to, progress) => {
+            let corrected_progress = ease_out_quart(*progress);
+            let delta = (corrected_progress * SCREEN_SIZE_F32) as i32;
+            let dir_coeff = match direction(*from, *to) {
+                TransitionDirection::Left => 1,
+                TransitionDirection::Right => -1,
+            };
+            let x_from = delta * dir_coeff;
+            let x_to = (delta - SCREEN_SIZE as i32) * dir_coeff;
+
+            render_screen(from, tracker, x_from, 0);
+            render_screen(to, tracker, x_to, 0);
+        }
+    }
 }

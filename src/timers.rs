@@ -1,8 +1,11 @@
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, time::Duration, vec};
 
-use crate::wtime::Winstant;
+use crate::{unique_usize::get_unique_usize, wasm4::trace, wtime::Winstant};
 
-pub static mut TIMERS: Timers = Timers { last_calls: None };
+pub static mut TIMERS: Timers = Timers {
+    last_calls: None,
+    intervals: vec![],
+};
 
 #[derive(Eq, Hash, PartialEq)]
 pub enum ActionId {
@@ -36,8 +39,15 @@ pub enum ActionId {
     SongAddPattern,
 }
 
+struct StoredInterval {
+    id: usize,
+    thunk: Box<dyn Fn()>,
+    interval: usize,
+}
+
 pub struct Timers {
     last_calls: Option<HashMap<ActionId, Winstant>>,
+    intervals: Vec<StoredInterval>,
 }
 
 impl Timers {
@@ -72,6 +82,37 @@ impl Timers {
             Some(last_call) if now > *last_call + t => self.run_action(action_id, action),
             None => self.run_action(action_id, action),
             _ => {}
+        }
+    }
+
+    pub fn set_interval<F>(&mut self, id: usize, action: F, interval: usize) -> usize
+    where
+        F: Fn() + 'static,
+    {
+        self.intervals.push(StoredInterval {
+            id,
+            thunk: Box::new(action),
+            interval,
+        });
+        id
+    }
+
+    pub fn cancel_interval(&mut self, interval_id: usize) {
+        let mut i = 0;
+        while i < self.intervals.len() {
+            let x = &mut self.intervals[i];
+            if x.id == interval_id {
+                self.intervals.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    pub fn tick(&self) {
+        for interval in &self.intervals {
+            let x = &interval.thunk;
+            x();
         }
     }
 }

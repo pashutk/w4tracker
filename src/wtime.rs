@@ -1,4 +1,7 @@
-use std::{ops::Add, time::Duration};
+use std::{
+    ops::{Add, Sub},
+    time::Duration,
+};
 
 #[derive(PartialEq, PartialOrd, Clone, Copy)]
 pub struct Winstant(u32);
@@ -16,6 +19,10 @@ impl Winstant {
 
     pub fn tick() {
         unsafe { NOW += 1 }
+    }
+
+    pub fn duration_since(&self, earlier: Winstant) -> Duration {
+        Duration::from_frames(self.0 - earlier.0)
     }
 }
 
