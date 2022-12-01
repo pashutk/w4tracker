@@ -39,18 +39,18 @@ pub enum ActionId {
     SongAddPattern,
 }
 
-struct StoredInterval {
+struct StoredInterval<'a> {
     id: usize,
-    thunk: Box<dyn Fn()>,
+    thunk: Box<dyn Fn() + 'a>,
     interval: usize,
 }
 
-pub struct Timers {
+pub struct Timers<'a> {
     last_calls: Option<HashMap<ActionId, Winstant>>,
-    intervals: Vec<StoredInterval>,
+    intervals: Vec<StoredInterval<'a>>,
 }
 
-impl Timers {
+impl<'a> Timers<'a>  {
     pub fn init(&mut self) {
         self.last_calls = Some(HashMap::new());
     }
@@ -87,7 +87,7 @@ impl Timers {
 
     pub fn set_interval<F>(&mut self, id: usize, action: F, interval: usize) -> usize
     where
-        F: Fn() + 'static,
+        F: Fn() + 'a
     {
         self.intervals.push(StoredInterval {
             id,
