@@ -36,6 +36,7 @@ jobs:
       - run: ./w4 bundle cart_snip_opt.wasm --title "w4tracker" --html index.html
       - run: mkdir _build && mv index.html _build/index.html
       - name: Deploy 🚀
+        if: ${{ github.ref_name == 'main' }}
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: _build
