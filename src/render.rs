@@ -200,6 +200,23 @@ pub fn instrument_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {
         }
     };
 
+    let input_i8 = |x: i32, y: i32, label: &str, value: i8, id: InstrumentInput| {
+        set_color(Color::Primary);
+        text(label, relative_x(x), relative_y(y));
+        let value_x: i32 = value_column_x;
+        if focus == id {
+            let characters_count = if value < 0 { 3 } else { 2 };
+            let rect_width: u32 = 8 * characters_count + 1;
+            rect(relative_x(value_x - 1), relative_y(y - 1), rect_width, 9);
+            set_color(Color::Background);
+        }
+        let format_string = if value < 0 { format!("-{:02X}", -value) } else { format!( "{:02X}", value) };
+        text(format_string, relative_x(value_x), relative_y(y));
+        if focus == id {
+            set_color(Color::Primary);
+        }
+    };
+
     input(
         10,
         40,
@@ -235,6 +252,8 @@ pub fn instrument_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {
     );
 
     input(10, 90, "Peak", instrument.peak(), InstrumentInput::Peak);
+
+    input_i8(10, 100, "Note sweep", instrument.note_sweep(), InstrumentInput::NoteSweep);
 }
 
 pub fn song_screen(tracker: &Tracker, origin_x: i32, origin_y: i32) {

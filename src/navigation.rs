@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, time::Duration, vec};
+use std::{time::Duration};
 
 use crate::{
     instrument::add_instrument_screen_handlers,
@@ -8,7 +8,6 @@ use crate::{
     timers::TIMERS,
     tracker::TRACKER,
     unique_usize::get_unique_usize,
-    wasm4::trace,
     wtime::Winstant,
     INPUTS,
 };
