@@ -136,7 +136,7 @@ impl Tracker {
             cursor_tick: 0,
             play: PlayMode::Idle,
             selected_column: Column::Note,
-            instruments: [Instrument::new(DutyCycle::Eighth, 0, 0, 0x0f, 0x0f, 0x64, 0x64);
+            instruments: [Instrument::new(DutyCycle::Eighth, 0, 0, 0x0f, 0x0f, 0x64, 0x64, 0);
                 MAX_INSTRUMENTS],
             screens: Screens::Single(Screen::Pattern),
             selected_instrument_index: 0,
@@ -181,7 +181,7 @@ impl Tracker {
                     let instrument = self.instruments[note.instrument];
                     let duty_cycle = instrument.duty_cycle().to_flag();
                     tone(
-                        NOTE_FREQ[note.index].into(),
+                        instrument.get_frequency(note),
                         instrument.get_duration(),
                         instrument.get_volume(),
                         TONE_PULSE1 | duty_cycle,
@@ -194,7 +194,7 @@ impl Tracker {
                     let instrument = self.instruments[note.instrument];
                     let duty_cycle = instrument.duty_cycle().to_flag();
                     tone(
-                        NOTE_FREQ[note.index].into(),
+                        instrument.get_frequency(note),
                         instrument.get_duration(),
                         instrument.get_volume(),
                         TONE_PULSE2 | duty_cycle,
@@ -207,7 +207,7 @@ impl Tracker {
                     let instrument = self.instruments[note.instrument];
                     let duty_cycle = instrument.duty_cycle().to_flag();
                     tone(
-                        NOTE_FREQ[note.index].into(),
+                        instrument.get_frequency(note),
                         instrument.get_duration(),
                         instrument.get_volume(),
                         TONE_TRIANGLE | duty_cycle,
@@ -220,7 +220,7 @@ impl Tracker {
                     let instrument = self.instruments[note.instrument];
                     let duty_cycle = instrument.duty_cycle().to_flag();
                     tone(
-                        NOTE_FREQ[note.index].into(),
+                        instrument.get_frequency(note),
                         instrument.get_duration(),
                         instrument.get_volume(),
                         TONE_NOISE | duty_cycle,
@@ -234,7 +234,7 @@ impl Tracker {
                     let duty_cycle = instrument.duty_cycle().to_flag();
                     let channel = self.selected_channel;
                     tone(
-                        NOTE_FREQ[note.index].into(),
+                        instrument.get_frequency(note),
                         instrument.get_duration(),
                         instrument.get_volume(),
                         match channel {
@@ -345,7 +345,8 @@ impl Tracker {
             InstrumentInput::Sustain => InstrumentInput::Release,
             InstrumentInput::Release => InstrumentInput::Volume,
             InstrumentInput::Volume => InstrumentInput::Peak,
-            InstrumentInput::Peak => InstrumentInput::Peak,
+            InstrumentInput::Peak => InstrumentInput::NoteSweep,
+            InstrumentInput::NoteSweep => InstrumentInput::NoteSweep,
         }
     }
 
@@ -358,6 +359,7 @@ impl Tracker {
             InstrumentInput::Release => InstrumentInput::Sustain,
             InstrumentInput::Volume => InstrumentInput::Release,
             InstrumentInput::Peak => InstrumentInput::Volume,
+            InstrumentInput::NoteSweep => InstrumentInput::Peak,
         }
     }
 
@@ -476,10 +478,15 @@ impl Tracker {
         // instruments (MAX_INSTRUMENTS * 5)
         for instrument in self.instruments {
             let instrument_bytes = instrument.to_bytes(STORAGE_LAYOUT_VERSION);
-            for byte in instrument_bytes {
-                buf[next_byte] = byte;
-                next_byte += 1;
-            }
+            buf[next_byte + 0] = instrument_bytes.0;
+            buf[next_byte + 1] = instrument_bytes.1;
+            buf[next_byte + 2] = instrument_bytes.2;
+            buf[next_byte + 3] = instrument_bytes.3;
+            buf[next_byte + 4] = instrument_bytes.4;
+            buf[next_byte + 5] = instrument_bytes.5;
+            buf[next_byte + 6] = instrument_bytes.6;
+            buf[next_byte + 7]  = instrument_bytes.7 as u8;
+            next_byte += 8;
         }
 
         // patterns (MAX_PATTERNS * 16 * 2 (note size))
@@ -564,8 +571,9 @@ impl Tracker {
                 buf[next_byte + 4],
                 buf[next_byte + 5],
                 buf[next_byte + 6],
+                buf[next_byte + 7] as i8,
             );
-            next_byte += 7;
+            next_byte += 8;
             let instrument = Instrument::from_bytes(bytes);
             tracker.instruments[instrument_index] = instrument;
         }

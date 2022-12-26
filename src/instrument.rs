@@ -7,6 +7,7 @@ use crate::{
     timers::{ActionId, TIMERS},
     tracker::{PlayMode, TRACKER},
     wasm4::{TONE_MODE1, TONE_MODE2, TONE_MODE3, TONE_MODE4},
+    notes::{NOTE_FREQ, Note}
 };
 
 pub const MAX_INSTRUMENTS: usize = 0x20;
@@ -58,6 +59,7 @@ pub struct Instrument {
     release: u8,
     volume: u8,
     peak: u8,
+    note_sweep: i8,
 }
 
 const MAX_VOLUME: u8 = 0x64;
@@ -72,6 +74,7 @@ impl Instrument {
         release: u8,
         volume: u8,
         peak: u8,
+        note_sweep: i8,
     ) -> Instrument {
         Instrument {
             duty_cycle,
@@ -81,6 +84,7 @@ impl Instrument {
             release,
             volume,
             peak,
+            note_sweep,
         }
     }
 
@@ -110,6 +114,10 @@ impl Instrument {
 
     pub fn peak(&self) -> u8 {
         self.peak
+    }
+
+    pub fn note_sweep(&self) -> i8 {
+        self.note_sweep
     }
 
     pub fn update_duty_cycle<F>(&mut self, f: F)
@@ -161,29 +169,38 @@ impl Instrument {
         self.peak = f(self.peak).clamp(0, MAX_PEAK);
     }
 
-    pub fn to_bytes(&self, api_version: u8) -> Vec<u8> {
+    pub fn update_note_sweep<F>(&mut self, f: F)
+    where
+        F: FnOnce(i8) -> i8,
+    {
+        let max_sweep = NOTE_FREQ.len() as i8 - 1;
+        self.note_sweep = f(self.note_sweep).clamp(-max_sweep, max_sweep)
+    }
+
+    pub fn to_bytes(&self, api_version: u8) -> (u8, u8, u8, u8, u8, u8, u8, i8) {
         match api_version {
             1 => {
-                let mut v = vec![0_u8; 7];
-                v[0] = match self.duty_cycle {
+            (
+                match self.duty_cycle {
                     DutyCycle::Eighth => 0,
                     DutyCycle::Fourth => 1,
                     DutyCycle::Half => 2,
                     DutyCycle::ThreeFourth => 3,
-                };
-                v[1] = self.attack;
-                v[2] = self.decay;
-                v[3] = self.release;
-                v[4] = self.sustain;
-                v[5] = self.volume;
-                v[6] = self.peak;
-                v
+                },
+                self.attack,
+                self.decay,
+                self.release,
+                self.sustain,
+                self.volume,
+                self.peak,
+                self.note_sweep
+            )
             }
             _ => panic!("Unsupported api version"),
         }
     }
 
-    pub fn from_bytes(bytes: (u8, u8, u8, u8, u8, u8, u8)) -> Self {
+    pub fn from_bytes(bytes: (u8, u8, u8, u8, u8, u8, u8, i8)) -> Self {
         Instrument {
             duty_cycle: match bytes.0 {
                 0 => DutyCycle::Eighth,
@@ -198,6 +215,7 @@ impl Instrument {
             release: bytes.4,
             volume: bytes.5,
             peak: bytes.6,
+            note_sweep: bytes.7,
         }
     }
 
@@ -211,6 +229,11 @@ impl Instrument {
     pub fn get_volume(&self) -> u32 {
         (self.peak as u32) << 8 | self.volume as u32
     }
+
+    pub fn get_frequency(&self, initial_note: Note) -> u32 {
+        let sweep_to_index: usize = (initial_note.index as i16 + self.note_sweep as i16).clamp(0, NOTE_FREQ.len() as i16 - 1) as usize;
+        NOTE_FREQ[initial_note.index] as u32 | ((NOTE_FREQ[sweep_to_index] as u32) << 16)
+    }
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -222,6 +245,7 @@ pub enum InstrumentInput {
     Release,
     Volume,
     Peak,
+    NoteSweep,
 }
 
 fn on_button_down_press(inputs: &Inputs) {
@@ -255,6 +279,9 @@ fn on_button_down_press(inputs: &Inputs) {
                         }
                         InstrumentInput::Peak => {
                             selected_instrument.update_peak(|a| a.saturating_sub(0x10))
+                        }
+                        InstrumentInput::NoteSweep => {
+                            selected_instrument.update_note_sweep(|a| a.saturating_sub(0x10))
                         }
                         InstrumentInput::DutyCycle => {}
                     }
@@ -297,6 +324,9 @@ fn on_button_up_press(inputs: &Inputs) {
                         }
                         InstrumentInput::Peak => {
                             selected_instrument.update_peak(|a| a.saturating_add(0x10))
+                        }
+                        InstrumentInput::NoteSweep => {
+                            selected_instrument.update_note_sweep(|a| a.saturating_add(0x10))
                         }
                         InstrumentInput::DutyCycle => {}
                     }
@@ -353,6 +383,9 @@ fn on_button_left_press(inputs: &Inputs) {
                         InstrumentInput::Peak => {
                             selected_instrument.update_peak(|a| a.saturating_sub(1))
                         }
+                        InstrumentInput::NoteSweep => {
+                            selected_instrument.update_note_sweep(|a| a.saturating_sub(1))
+                        }
                     }
                 },
             )
@@ -390,6 +423,9 @@ fn on_button_right_press(inputs: &Inputs) {
                         }
                         InstrumentInput::Peak => {
                             selected_instrument.update_peak(|a| a.saturating_add(1))
+                        }
+                        InstrumentInput::NoteSweep => {
+                            selected_instrument.update_note_sweep(|a| a.saturating_add(1))
                         }
                     }
                 },
